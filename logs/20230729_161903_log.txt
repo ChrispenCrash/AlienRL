@@ -1,0 +1,40 @@
+INFO:root:Iteration 0
+INFO:root:This is an informational message.
+WARNING:root:This is a warning message.
+ERROR:root:This is an error message.
+INFO:root:Iteration 1
+INFO:root:This is an informational message.
+WARNING:root:This is a warning message.
+ERROR:root:This is an error message.
+INFO:root:Iteration 2
+INFO:root:This is an informational message.
+WARNING:root:This is a warning message.
+ERROR:root:This is an error message.
+INFO:root:Iteration 3
+INFO:root:This is an informational message.
+WARNING:root:This is a warning message.
+ERROR:root:This is an error message.
+INFO:root:Iteration 4
+INFO:root:This is an informational message.
+WARNING:root:This is a warning message.
+ERROR:root:This is an error message.
+INFO:root:Iteration 5
+INFO:root:This is an informational message.
+WARNING:root:This is a warning message.
+ERROR:root:This is an error message.
+INFO:root:Iteration 6
+INFO:root:This is an informational message.
+WARNING:root:This is a warning message.
+ERROR:root:This is an error message.
+INFO:root:Iteration 7
+INFO:root:This is an informational message.
+WARNING:root:This is a warning message.
+ERROR:root:This is an error message.
+INFO:root:Iteration 8
+INFO:root:This is an informational message.
+WARNING:root:This is a warning message.
+ERROR:root:This is an error message.
+INFO:root:Iteration 9
+INFO:root:This is an informational message.
+WARNING:root:This is a warning message.
+ERROR:root:This is an error message.

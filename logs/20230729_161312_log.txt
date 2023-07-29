@@ -1,0 +1,40 @@
+2023-07-29 16:13:12,685 - INFO - Iteration 0
+2023-07-29 16:13:12,686 - INFO - This is an informational message.
+2023-07-29 16:13:12,686 - WARNING - This is a warning message.
+2023-07-29 16:13:12,686 - ERROR - This is an error message.
+2023-07-29 16:13:14,107 - INFO - Iteration 1
+2023-07-29 16:13:14,107 - INFO - This is an informational message.
+2023-07-29 16:13:14,108 - WARNING - This is a warning message.
+2023-07-29 16:13:14,108 - ERROR - This is an error message.
+2023-07-29 16:13:15,529 - INFO - Iteration 2
+2023-07-29 16:13:15,529 - INFO - This is an informational message.
+2023-07-29 16:13:15,530 - WARNING - This is a warning message.
+2023-07-29 16:13:15,530 - ERROR - This is an error message.
+2023-07-29 16:13:16,951 - INFO - Iteration 3
+2023-07-29 16:13:16,951 - INFO - This is an informational message.
+2023-07-29 16:13:16,951 - WARNING - This is a warning message.
+2023-07-29 16:13:16,952 - ERROR - This is an error message.
+2023-07-29 16:13:18,373 - INFO - Iteration 4
+2023-07-29 16:13:18,373 - INFO - This is an informational message.
+2023-07-29 16:13:18,373 - WARNING - This is a warning message.
+2023-07-29 16:13:18,374 - ERROR - This is an error message.
+2023-07-29 16:13:19,795 - INFO - Iteration 5
+2023-07-29 16:13:19,795 - INFO - This is an informational message.
+2023-07-29 16:13:19,795 - WARNING - This is a warning message.
+2023-07-29 16:13:19,796 - ERROR - This is an error message.
+2023-07-29 16:13:21,217 - INFO - Iteration 6
+2023-07-29 16:13:21,217 - INFO - This is an informational message.
+2023-07-29 16:13:21,218 - WARNING - This is a warning message.
+2023-07-29 16:13:21,218 - ERROR - This is an error message.
+2023-07-29 16:13:22,639 - INFO - Iteration 7
+2023-07-29 16:13:22,639 - INFO - This is an informational message.
+2023-07-29 16:13:22,640 - WARNING - This is a warning message.
+2023-07-29 16:13:22,640 - ERROR - This is an error message.
+2023-07-29 16:13:24,061 - INFO - Iteration 8
+2023-07-29 16:13:24,061 - INFO - This is an informational message.
+2023-07-29 16:13:24,062 - WARNING - This is a warning message.
+2023-07-29 16:13:24,062 - ERROR - This is an error message.
+2023-07-29 16:13:25,483 - INFO - Iteration 9
+2023-07-29 16:13:25,483 - INFO - This is an informational message.
+2023-07-29 16:13:25,483 - WARNING - This is a warning message.
+2023-07-29 16:13:25,484 - ERROR - This is an error message.
