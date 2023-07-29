@@ -42,9 +42,9 @@ while True:
         print()
         print("Car Coordinates: ")
         x, z, y = list(telemetry.graphics.carCoordinates)
-        print(f"x: {round(x,4)}")
-        print(f"y: {round(-1*y,4)}")
-        print(f"z: {round(z,4)}")
+        print(f"x: {round(x,2)}")
+        print(f"y: {round(-1*y,2)}")
+        print(f"z: {round(z,2)}")
 
         print()
         print("Wheel Slip: ")

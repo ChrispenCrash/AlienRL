@@ -1,9 +1,9 @@
 import os
 from datetime import datetime
 
-import logging
+# import logging
 run_start_time = datetime.now().strftime('%Y%m%d_%H%M%S')
-log_file_path = f'logs/{run_start_time}_log.txt'
+# log_file_path = f'logs/{run_start_time}_log.txt'
 
 from torch.utils.tensorboard import SummaryWriter
 import gymnasium as gym
@@ -17,22 +17,22 @@ import concurrent.futures
 
 from AlienEnv.alienrl_env import AlienRLEnv
 
-# Create a custom formatter without the level name
-formatter = logging.Formatter('%(message)s')
+# # Create a custom formatter without the level name
+# formatter = logging.Formatter('%(message)s')
 
-# Configure the root logger to use the custom formatter
-root_logger = logging.getLogger()
-root_logger.setLevel(logging.INFO)
+# # Configure the root logger to use the custom formatter
+# root_logger = logging.getLogger()
+# root_logger.setLevel(logging.INFO)
 
-# Create a FileHandler for the log file with the custom formatter
-file_handler = logging.FileHandler(log_file_path)
-file_handler.setFormatter(formatter)
-root_logger.addHandler(file_handler)
+# # Create a FileHandler for the log file with the custom formatter
+# file_handler = logging.FileHandler(log_file_path)
+# file_handler.setFormatter(formatter)
+# root_logger.addHandler(file_handler)
 
-# Create a StreamHandler for the terminal with the custom formatter
-stream_handler = logging.StreamHandler()
-stream_handler.setFormatter(formatter)
-root_logger.addHandler(stream_handler)
+# # Create a StreamHandler for the terminal with the custom formatter
+# stream_handler = logging.StreamHandler()
+# stream_handler.setFormatter(formatter)
+# root_logger.addHandler(stream_handler)
 
 env_name = "AlienRLEnv"
 
@@ -87,11 +87,11 @@ writer = SummaryWriter(logs_dir)
 # initialize a PPO agent
 agent = PPO(state_dim, action_dim, lr_actor, lr_critic, gamma, num_of_epochs, eps_clip, ent_coef, vf_coef, action_sd)
 
-logging.info("Initialisation complete.")
+print("Initialisation complete.")
 
 # track total training time
 start_time = datetime.now().replace(microsecond=0)
-logging.info("Training started at: ", start_time)
+print("Training started at: ", start_time)
 
 # printing and logging variables
 total_episodes = 0
@@ -136,21 +136,21 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 
             if future and future.done():
                 agent = future.result() # replace the old agent with the new, updated one
-                logging.info("Agent updated.")
+                print("Agent updated.")
                 agent.buffer.clear()
-                logging.info("Buffer cleared.")
-                # logging.info(f"{len(agent.buffer.states)=}")
-                # logging.info(f"{len(agent.buffer.state_values)=}")
+                print("Buffer cleared.")
+                # print(f"{len(agent.buffer.states)=}")
+                # print(f"{len(agent.buffer.state_values)=}")
                 future = None
 
             # Update agent
             if global_step_num % buffer_size == 0:
                 if not future: # only create a new future if the old one has finished
-                    logging.info("Updating agent...")
+                    print("Updating agent...")
                     new_agent = copy.deepcopy(agent) # create a copy of the current agent
-                    logging.info("Agent copied.")
-                    # logging.info(f"{len(new_agent.buffer.states)=}")
-                    # logging.info(f"{len(new_agent.buffer.state_values)=}")
+                    print("Agent copied.")
+                    # print(f"{len(new_agent.buffer.states)=}")
+                    # print(f"{len(new_agent.buffer.state_values)=}")
                     future = executor.submit(update_agent, new_agent) # update the new agent asynchronously
 
             # Decay action std of ouput action distribution
@@ -158,8 +158,9 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
                 agent.decay_action_sd(action_sd_decay_rate, min_action_sd)
 
             if global_step_num % save_model_freq == 0:
-                logging.info("Saving model...")
+                print("Saving model...")
                 agent.save(f"{checkpoint_path}{global_step_num}.pth")
+
 
         episode_times.append(datetime.now().replace(microsecond=0) - episode_start_time)
         reward_history.append(episode_reward)
@@ -173,10 +174,10 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
             
         
         if (total_episodes+1) % print_freq == 0:
-            logging.info("============================================================================================")
-            logging.info(f"Episode: {episode_num} \t Total Steps: {global_step_num} \t Average Reward: {avg_reward:9.02f} \t Best Reward: {best_reward:.02f}") 
-            logging.info(f"Elapsed Time: {datetime.now().replace(microsecond=0) - start_time}, Average Episode Time: {avg_episode_time:.2f} seconds")
-            logging.info("============================================================================================")
+            print("============================================================================================")
+            print(f"Episode: {episode_num} \t Total Steps: {global_step_num} \t Average Reward: {avg_reward:9.02f} \t Best Reward: {best_reward:.02f}") 
+            print(f"Elapsed Time: {datetime.now().replace(microsecond=0) - start_time} \t Average Episode Time: {avg_episode_time:.2f} seconds")
+            print("============================================================================================")
         writer.add_scalar('Reward', episode_reward, global_step=global_step_num)
         writer.add_scalar('Average Reward', avg_reward, global_step=global_step_num)
 
@@ -188,7 +189,7 @@ writer.close()
 env.close()
 
 end_time = datetime.now().replace(microsecond=0)
-logging.info()
-logging.info("Started training at: ", start_time)
-logging.info("Finished training at: ", end_time)
-logging.info("Total training time: ", end_time - start_time)
+print()
+print("Started training at: ", start_time)
+print("Finished training at: ", end_time)
+print("Total training time: ", end_time - start_time)

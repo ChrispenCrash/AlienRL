@@ -59,6 +59,10 @@ class AlienRLEnv(gym.Env):
         # Retrieve the new state and telemetry
         framestack, telemetry, raw_telemetry = self.game_state.get_obs()
 
+        # Make sure game is not paused
+        if raw_telemetry["paused"]:
+            self.controller.pause_game()
+
         observation = {'framestack': framestack, 'telemetry': telemetry}
 
         reward = self._calculate_reward(raw_telemetry)
@@ -75,7 +79,7 @@ class AlienRLEnv(gym.Env):
             # If the car hasn't moved for more than 10 seconds, reset the environment
             if time.time() - self.coords_updated_time > 10:
                 done = True
-                self.is_soft_reset = True
+                self.is_hard_reset = True
         else:
             # If the car has moved, update the coordinates and the time
             self.prev_coords = current_coords
@@ -85,7 +89,7 @@ class AlienRLEnv(gym.Env):
         # if raw_telemetry["normalizedCarPosition"] >= self.episode_end:
         #     done = True
         self.step_count += 1
-        if self.step_count >= EPISODE_STEP_COUNT:
+        if self.step_count >= EPISODE_STEP_COUNT or self.is_hard_reset:
             done = True
 
         info = raw_telemetry
@@ -111,27 +115,26 @@ class AlienRLEnv(gym.Env):
             progress = 0
 
         # Max progress should be (0.005 * 1000) = 5
-        progress *= 2000
+        progress_reward = progress * 25000
 
         # Max speed ~285 km/h, so max reward is 285/50 = 5.7
-        speed_reward = max(speed,0) / 30
+        speed_reward = max(speed,0) / 200
 
         # Reward the car for making progress along the track
-        progress_reward = max(0, progress)  # Only reward for forward progress
+        progress_reward = max(0, progress_reward)  # Only reward for forward progress
 
         # Penalize the car if it goes off the track
         if tyres_off_track >= 3:
-            off_track_penalty = -20
+            off_track_penalty = -50
         else:
-            off_track_penalty = 0
+            off_track_penalty = 1
 
         # Penalize the car for going the wrong way
-        wrong_way_penalty = -50 if progress < 0 else 0
-
-        if progress < 0:
+        if progress < -0.00001:
+            progress_reward = -100
             self.is_hard_reset = True
 
-        return speed_reward + progress_reward + off_track_penalty + wrong_way_penalty
+        return speed_reward + progress_reward + off_track_penalty
 
     def _calculate_episode_end(self, current_norm_car_position):
         multiple = math.ceil(current_norm_car_position/0.005)
@@ -162,9 +165,6 @@ class AlienRLEnv(gym.Env):
             self.episode_end = self._calculate_episode_end(self.current_norm_car_position)
             self.episode_start = self.episode_end - 0.005
             self.is_hard_reset = False
-
-
-        
 
         self.prev_coords = None
 

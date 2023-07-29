@@ -56,10 +56,16 @@ class GameController():
         # ctypes.windll.user32.keybd_event(0x1B, 0, KEYEVENTF_KEYDOWN, 0)
         # ctypes.windll.user32.keybd_event(0x1B, 0, KEYEVENTF_KEYUP, 0)
         self.pause_game()
+        sleep(2)
         pyautogui.click(x=645, y=426)
-        sleep(2)
+        sleep(0.5)
+        pyautogui.click(x=645, y=426)
+        sleep(3)
         pyautogui.click(x=49, y=217)
-        sleep(2)
+        sleep(0.5)
+        pyautogui.click(x=49, y=217)
+        pyautogui.click(x=49, y=217)
+        sleep(4)
 
     def pause_game(self):
         # self.gamepad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_START)
@@ -69,6 +75,7 @@ class GameController():
         # self.gamepad.update()
         self.focus_window()
         ctypes.windll.user32.keybd_event(0x1B, 0, KEYEVENTF_KEYDOWN, 0)
+        sleep(0.1)
         ctypes.windll.user32.keybd_event(0x1B, 0, KEYEVENTF_KEYUP, 0)
 
     def focus_window(self):
