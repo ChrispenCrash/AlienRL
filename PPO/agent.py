@@ -40,10 +40,6 @@ class ActorCritic(nn.Module):
         action_var = self.action_var.expand_as(action_mean)
         cov_mat = torch.diag_embed(action_var).to(self.device)
         dist = MultivariateNormal(action_mean, cov_mat)
-        
-        # For Single Action Environments.
-        if self.action_dim == 1:
-            action = action.reshape(-1, self.action_dim)
 
         action_logprobs = dist.log_prob(action)
         dist_entropy = dist.entropy()

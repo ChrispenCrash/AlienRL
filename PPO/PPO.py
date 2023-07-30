@@ -97,8 +97,6 @@ class PPO:
 
         # now old_states is a dictionary
         old_states = {'framestack': framestack_states, 'telemetry': telemetry_states}
-
-        # old_states = torch.squeeze(torch.stack(self.buffer.states, dim=0)).detach().to(device)
         old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(device)
         old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(device)
         old_state_values = torch.squeeze(torch.stack(self.buffer.state_values, dim=0)).detach().to(device)

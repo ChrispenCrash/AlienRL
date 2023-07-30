@@ -8,6 +8,8 @@ import numpy as np
 from pynput.keyboard import Controller as keyboardController
 import ctypes
 
+pyautogui.FAILSAFE = False
+
 # XUSB_GAMEPAD_DPAD_UP
 # XUSB_GAMEPAD_DPAD_DOWN
 # XUSB_GAMEPAD_DPAD_LEFT
@@ -65,7 +67,9 @@ class GameController():
         sleep(0.5)
         pyautogui.click(x=49, y=217)
         pyautogui.click(x=49, y=217)
-        sleep(4)
+        sleep(0.1)
+        # click off the window
+        pyautogui.click(x=647, y=881)
 
     def pause_game(self):
         # self.gamepad.press_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_START)
