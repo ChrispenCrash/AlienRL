@@ -164,6 +164,10 @@ class GameState:
       
         # Normalize telemetry
         heading = self.telemetry.physics.heading
+        steeringAngle = self.telemetry.physics.steerAngle
+        gas = self.telemetry.physics.gas
+        brake = self.telemetry.physics.brake
+        gas_brake = gas - brake
         x, z, y = list(self.telemetry.graphics.carCoordinates)
         fl_ws, fr_ws, rl_ws, rr_ws = list(self.telemetry.physics.wheelSlip)
         fl_sus, fr_sus, rl_sus, rr_sus = list(self.telemetry.physics.suspensionTravel)
@@ -185,18 +189,19 @@ class GameState:
             # (z - cfg.MIN_Z ) / self.Z_RANGE,
             max(self.telemetry.physics.speedKmh,0) / cfg.MAX_SPEED,
             self.telemetry.physics.steerAngle,
+            gas_brake,
             # np.sin(heading),
             # np.cos(heading),
-            # np.clip((fl_ws - cfg.FL_WS_MEAN) / cfg.FL_WS_STD, -2, 2),
-            # np.clip((fr_ws - cfg.FR_WS_MEAN) / cfg.FR_WS_STD, -2, 2),
-            # np.clip((rl_ws - cfg.RL_WS_MEAN) / cfg.RL_WS_STD, -2, 2),
-            # np.clip((rr_ws - cfg.RR_WS_MEAN) / cfg.RR_WS_STD, -2, 2),
-            # np.clip(fl_sus, 0.05, 0.13) / 0.13,
-            # np.clip(fr_sus, 0.05, 0.13) / 0.13,
-            # np.clip(rl_sus, 0.06, 0.14) / 0.14,
-            # np.clip(rr_sus, 0.06, 0.14) / 0.14
-            f_ws_norm,
-            r_ws_norm
+            np.clip((fl_ws - cfg.FL_WS_MEAN) / cfg.FL_WS_STD, -2, 2),
+            np.clip((fr_ws - cfg.FR_WS_MEAN) / cfg.FR_WS_STD, -2, 2),
+            np.clip((rl_ws - cfg.RL_WS_MEAN) / cfg.RL_WS_STD, -2, 2),
+            np.clip((rr_ws - cfg.RR_WS_MEAN) / cfg.RR_WS_STD, -2, 2),
+            np.clip(fl_sus, 0.05, 0.13) / 0.13,
+            np.clip(fr_sus, 0.05, 0.13) / 0.13,
+            np.clip(rl_sus, 0.06, 0.14) / 0.14,
+            np.clip(rr_sus, 0.06, 0.14) / 0.14
+            # f_ws_norm,
+            # r_ws_norm
         ])
 
         one_hot_tyres = np.zeros(5)
