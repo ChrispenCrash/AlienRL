@@ -58,11 +58,13 @@ class PPO:
 
         with torch.no_grad():
 
-            fs = torch.FloatTensor(state['framestack']).to(device)
-            fs = fs.view(1,3,84,84)
+            fs = torch.FloatTensor(state['framestack']).unsqueeze(0).to(device)
+            # print(fs.shape)
+            # fs = fs.view(1,3,84,84)
 
-            tel = torch.FloatTensor(state['telemetry']).to(device)
-            tel = tel.view(1, -1)
+            tel = torch.FloatTensor(state['telemetry']).unsqueeze(0).to(device)
+            # print(tel.shape)
+            # tel = tel.view(1, -1)
             
             state = {'framestack': fs, 'telemetry': tel}
         

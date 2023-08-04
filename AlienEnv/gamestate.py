@@ -191,7 +191,7 @@ class GameState:
             # (y - cfg.MIN_Y ) / self.Y_RANGE,
             # (z - cfg.MIN_Z ) / self.Z_RANGE,
             max(self.telemetry.physics.speedKmh,0) / cfg.MAX_SPEED,
-            self.telemetry.physics.steerAngle,
+            steeringAngle,
             gas_brake,
             # np.sin(heading),
             # np.cos(heading),
