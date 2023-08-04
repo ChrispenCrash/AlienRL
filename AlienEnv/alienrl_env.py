@@ -1,14 +1,31 @@
 import time
 import math
+import math
+from math import radians
 import numpy as np
-
+import pandas as pd
+import socket
+import pickle
 import gymnasium as gym
 from gymnasium import spaces
 
 from AlienEnv.gamestate import GameState
 from AlienEnv.controller import GameController
+from AlienEnv.utils import correct_heading, get_nearest_points, get_line_direction_degrees, get_difference_in_degrees
 
-EPISODE_STEP_COUNT = 200
+EPISODE_STEP_COUNT = 500
+
+def tanh(x):
+    return (math.exp(x) - math.exp(-x)) / (math.exp(x) + math.exp(-x))
+
+def send_data(host, port, data):
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+        s.connect((host, port))
+        s.sendall(pickle.dumps(data))
+
+df = pd.read_parquet("AlienEnv/data/track_points.parquet")
+df['order'] = df['order'].astype(int)
+track_points = [tuple(x) for x in df.values.tolist()]
 
 class AlienRLEnv(gym.Env):
     """
@@ -47,6 +64,9 @@ class AlienRLEnv(gym.Env):
         self.is_hard_reset = False
         self.is_soft_reset = False
 
+        self.prev_steer_action = None
+        self.prev_throttle_action = None
+
         self.step_count = 0
 
     def step(self, action):
@@ -57,6 +77,9 @@ class AlienRLEnv(gym.Env):
         truncated = False
         info = {}
 
+        self.curr_steer_action = action[0]
+        self.curr_throttle_action = action[1]
+
         self.controller.set_inputs(action[0], action[1])
 
         # Retrieve the new state and telemetry
@@ -65,23 +88,24 @@ class AlienRLEnv(gym.Env):
         temp_current_norm_position = raw_telemetry["normalizedCarPosition"]
 
         # Make sure game is not paused
-        if raw_telemetry["paused"]:
-            self.controller.pause_game()
+        # if raw_telemetry["paused"]:
+        #     self.controller.pause_game()
 
         observation = {'framestack': framestack, 'telemetry': telemetry}
 
         reward, done = self._calculate_reward(raw_telemetry)
 
-        # Check if the car is stuck
+        # # Check if the car is stuck
         current_coords = np.array([raw_telemetry["x"], raw_telemetry["y"], raw_telemetry["z"]])
-        current_coords = np.round(current_coords, 2)
+        current_coords = np.round(current_coords, 0)
         if self.prev_coords is not None and np.array_equal(self.prev_coords, current_coords):
             # If the car hasn't moved for more than 10 seconds, reset the environment
-            if time.time() - self.coords_updated_time > 10:
+            if time.time() - self.coords_updated_time > 20:
                 done = True
                 self.is_hard_reset = True
-                reward -= 100
-                print("Car stuck for 10 seconds, resetting.")
+                reward = -1000
+                print("Car stuck for 20 seconds, restarting.")
+                self.coords_updated_time = time.time()
         else:
             # If the car has moved, update the coordinates and the time
             self.prev_coords = current_coords
@@ -98,15 +122,19 @@ class AlienRLEnv(gym.Env):
 
         self.prev_norm_car_position = temp_current_norm_position
 
+        self.prev_steer_action = self.curr_steer_action
+        self.prev_throttle_action = self.curr_throttle_action
+
         return observation, reward, done, truncated, info
     
     def _calculate_reward(self, raw_telemetry):
 
         done = False
 
-        speed = raw_telemetry['speed']
+        # speed = raw_telemetry['speed']
         current_norm_position = raw_telemetry['normalizedCarPosition']
         tyres_off_track = raw_telemetry['num_wheels_off_track']
+        car_damage = raw_telemetry['car_damage']
 
         # Determine if the car is making progress
         if self.prev_norm_car_position is not None:
@@ -118,38 +146,95 @@ class AlienRLEnv(gym.Env):
         else:
             progress = 0
 
-        # Max progress should be (0.005 * 1000) = 5
-        progress_reward = progress * 50_000
+        # Penalize the car for going the wrong way
+        if progress < -0.01:
+            print("Car going the wrong way, resetting.")
+            progress_reward = -1500
+            self.is_hard_reset = True
+            done = True
+        else:
+            progress = progress * 10_000
+            # Max progress should be (0.005 * 1000) = 5
+            progress_reward = tanh(progress)
 
         # Max speed ~285 km/h, so max reward is 285/50 = 5.7
         # speed_reward = max(speed,0) / 275
-        speed_reward = 0 # temporarily disabled
+        # speed_reward = 0 # temporarily disabled
 
         # Reward the car for making progress along the track
-        progress_reward = max(0, progress_reward)  # Only reward for forward progress
+        # progress_reward = max(0, progress_reward)  # Only reward for forward progress
+
+        # Penalize large changes in steering angle and throttle
+        # if self.prev_steer_action is not None:
+        #     action_change = np.abs(self.curr_steer_action - self.prev_steer_action)
+        #     action_change_penalty = - change_penalty_factor * action_change
+        #     reward += action_change_penalty
 
         # Penalize the car if it goes off the track
-        off_track_penalty = 0
-        if tyres_off_track >= 3:
-            off_track_penalty = -5
+        # off_track_penalty = 0
+        # if tyres_off_track == 0:
+        #     off_track_penalty= 0
+        # elif tyres_off_track == 1:
+        #     off_track_penalty = -0.2
+        # elif tyres_off_track == 2:
+        #     off_track_penalty = -0.3
+        # else:
+        #     off_track_penalty = -1
             # self.is_hard_reset = True
 
-        # Penalize the car for going the wrong way
-        if progress < -0.00001:
-            progress_reward = -100
+        # 0 tires = -0.0001
+        # 1 tire  = -0.001
+        # 2 tires = -0.01
+        # 3 tires = -0.1
+        # 4 tires = -1
+        # off_track_penalty = -1*math.pow(0.1, 4-tyres_off_track)
+        # if tyres_off_track == 0:
+        #     off_track_penalty = 1
+        if tyres_off_track == 0:
+            on_track_reward = 1
+        elif tyres_off_track == 1:
+            on_track_reward = 0.75
+        elif tyres_off_track == 2:
+            on_track_reward = 0.5
+        else:
+            on_track_reward = -1
+
+        if car_damage > 0:
+            print("Car damaged, restarting.")
+            car_damage_penalty = -1500
             self.is_hard_reset = True
             done = True
+        else:
+            car_damage_penalty = 0
 
+        
+
+        car_x = raw_telemetry['x']
+        car_y = raw_telemetry['y']
+        car_heading = raw_telemetry['heading']
+        car_coords = (car_x, car_y)
+        point1, point2 = get_nearest_points(track_points, car_coords)
+        theta = get_difference_in_degrees(car_heading, point1, point2)
+        orientation_reward = np.round(np.cos(radians(theta)),2)
+
+        # print(f"{progress=}")
         # print(f"{progress_reward=}")
-        # print(f"{speed_reward=}")
-        # print(f"{off_track_penalty=}")
+        # print(f"{car_damage_penalty=}")
+        # print(f"{orientation_reward=}")
+        # print(f"{on_track_reward=}")
         # print(f"{current_norm_position=}")
         # print(f"{self.prev_norm_car_position=}")
         # print(f"{current_norm_position - self.prev_norm_car_position}")
-        # print(speed_reward + progress_reward + off_track_penalty)
+        # print(progress_reward + on_track_reward + car_damage_penalty + orientation_reward)
         # print()
 
-        return (speed_reward + progress_reward + off_track_penalty), done
+        message = {"progress_reward": progress_reward, 
+                   "on_track_reward": on_track_reward, 
+                   "car_damage_penalty": car_damage_penalty, 
+                   "orientation_reward": orientation_reward}
+        send_data('localhost', 12345, message)
+
+        return (progress_reward + on_track_reward + car_damage_penalty + orientation_reward), done
 
     def _calculate_episode_end(self, current_norm_car_position):
         multiple = math.ceil(current_norm_car_position/0.005)
@@ -166,21 +251,25 @@ class AlienRLEnv(gym.Env):
         framestack, telemetry, raw_telemetry = self.game_state.get_obs()
         
         # If stuck in wall, rewind time 20 seconds
-        self.rewind_time = rewind_time
-        if self.is_soft_reset:
-            self.controller.rewind_time(seconds=self.rewind_time)
-            self.current_norm_car_position = raw_telemetry["normalizedCarPosition"]
-            self.episode_end = self._calculate_episode_end(self.current_norm_car_position)
-            self.episode_start = self.episode_end - 0.005
-            self.is_soft_reset = False
+        # self.rewind_time = rewind_time
+        # if self.is_soft_reset:
+        #     self.controller.rewind_time(seconds=self.rewind_time)
+        #     self.current_norm_car_position = raw_telemetry["normalizedCarPosition"]
+        #     self.episode_end = self._calculate_episode_end(self.current_norm_car_position)
+        #     self.episode_start = self.episode_end - 0.005
+        #     self.is_soft_reset = False
 
-        if self.is_hard_reset or raw_telemetry['num_wheels_off_track'] >= 3:
-            self.controller.reset_inputs()
-            self.controller.restart_session()
-            self.current_norm_car_position = raw_telemetry["normalizedCarPosition"]
-            self.episode_end = self._calculate_episode_end(self.current_norm_car_position)
-            self.episode_start = self.episode_end - 0.005
+        if self.is_hard_reset:
             self.is_hard_reset = False
+            print("Hard reset detected, restarting session.")
+            self.controller.reset_inputs()
+            # breakpoint()
+            self.controller.restart_session()
+            self.coords_updated_time = time.time()
+            # self.current_norm_car_position = raw_telemetry["normalizedCarPosition"]
+            # self.episode_end = self._calculate_episode_end(self.current_norm_car_position)
+            # self.episode_start = self.episode_end - 0.005
+            # self.is_hard_reset = False
 
         self.prev_coords = None
 

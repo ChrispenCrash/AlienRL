@@ -335,7 +335,7 @@ class ActorNetwork(nn.Module):
         
         # Convolutional layers for image
         self.cnn = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=(4, 4), stride=2),
+            nn.Conv2d(in_channels=12, out_channels=16, kernel_size=(4, 4), stride=2),
             nn.LeakyReLU(),
             nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(4, 4), stride=2),
             nn.LeakyReLU(),
@@ -352,7 +352,7 @@ class ActorNetwork(nn.Module):
         
         # Fully connected layers for telemetry data
         self.fc1 = nn.Sequential(
-            nn.Linear(9, 128),
+            nn.Linear(15, 128),
             nn.LeakyReLU(),
             nn.Linear(128, 128),
             nn.LeakyReLU(),
@@ -378,28 +378,49 @@ class ActorNetwork(nn.Module):
         self.apply(self.initialize_weights)
 
     def initialize_weights(self, m):
-        if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
-            nn.init.xavier_normal_(m.weight.data)
-        elif isinstance(m, nn.LSTM):
-            for name, param in m.named_parameters():
-                if 'weight_ih' in name:
-                    nn.init.xavier_normal_(param.data)
-                elif 'weight_hh' in name:
-                    nn.init.orthogonal_(param.data)
-                elif 'bias' in name:
-                    nn.init.zeros_(param.data)
+        if isinstance(m, nn.Linear):
+            nn.init.xavier_uniform_(m.weight)
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+        elif isinstance(m, nn.Conv2d):
+            nn.init.kaiming_normal_(m.weight, mode='fan_out', nonlinearity='relu')
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+            elif isinstance(m, nn.LSTM):
+                for name, param in m.named_parameters():
+                    if 'weight_ih' in name:
+                        nn.init.xavier_normal_(param.data)
+                    elif 'weight_hh' in name:
+                        nn.init.orthogonal_(param.data)
+                    elif 'bias' in name:
+                        nn.init.zeros_(param.data)
 
     
     def forward(self, obs):
 
-        image = obs['image']
+        framestack = obs['framestack']
         telemetry = obs['telemetry']
 
-        cnn = self.cnn(image)
+        # print(framestack.shape)
+        # print(telemetry.shape)
+
+        # telemetry = telemetry.unsqueeze(0)
+
+        cnn = self.cnn(framestack)
         fc1 = self.fc1(telemetry)
-        
+
+        # if len(cnn.shape) != 2 or len(fc1.shape) != 2:
+        #     print("Unexpected tensor dimensions!")
+        #     print("CNN shape: ", cnn.shape)
+        #     print("FC1 shape: ", fc1.shape)
+        #     assert False
+
+        if len(telemetry.shape) == 1:
+            telemetry = telemetry.unsqueeze(0)
+
         combined = torch.cat((cnn, fc1), dim=1)
         
+        self.lstm.flatten_parameters()
         lstm_out, _ = self.lstm(combined)
         
         output = self.fc_out(lstm_out.squeeze(1))
@@ -409,11 +430,11 @@ class ActorNetwork(nn.Module):
 
 class CriticNetwork(nn.Module):
     def __init__(self):
-        super(ActorNetwork, self).__init__()
+        super(CriticNetwork, self).__init__()
         
         # Convolutional layers for image
         self.cnn = nn.Sequential(
-            nn.Conv2d(in_channels=3, out_channels=16, kernel_size=(4, 4), stride=2),
+            nn.Conv2d(in_channels=12, out_channels=16, kernel_size=(4, 4), stride=2),
             nn.LeakyReLU(),
             nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(4, 4), stride=2),
             nn.LeakyReLU(),
@@ -430,7 +451,7 @@ class CriticNetwork(nn.Module):
         
         # Fully connected layers for telemetry data
         self.fc1 = nn.Sequential(
-            nn.Linear(9, 128),
+            nn.Linear(15, 128),
             nn.LeakyReLU(),
             nn.Linear(128, 128),
             nn.LeakyReLU(),
@@ -454,6 +475,31 @@ class CriticNetwork(nn.Module):
         # Initialize weights
         self.apply(self.initialize_weights)
 
+    def forward(self, obs):
+
+        framestack = obs['framestack']
+        telemetry = obs['telemetry']
+
+        batch_size, stack_size, C, H, W = framestack.size()
+        cnn_in = framestack.view(batch_size, C*stack_size, H, W)
+
+        # telemetry = telemetry.unsqueeze(0)
+
+        cnn = self.cnn(cnn_in)
+        fc1 = self.fc1(telemetry)
+
+        if len(telemetry.shape) == 1:
+            telemetry = telemetry.unsqueeze(0)
+        
+        combined = torch.cat((cnn, fc1), dim=1)
+        
+        self.lstm.flatten_parameters()
+        lstm_out, _ = self.lstm(combined)
+        
+        output = self.fc_out(lstm_out.squeeze(1))
+        
+        return output
+    
     def initialize_weights(self, m):
         if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
             nn.init.xavier_normal_(m.weight.data)
@@ -465,20 +511,3 @@ class CriticNetwork(nn.Module):
                     nn.init.orthogonal_(param.data)
                 elif 'bias' in name:
                     nn.init.zeros_(param.data)
-
-    
-    def forward(self, obs):
-
-        image = obs['image']
-        telemetry = obs['telemetry']
-
-        cnn = self.cnn(image)
-        fc1 = self.fc1(telemetry)
-        
-        combined = torch.cat((cnn, fc1), dim=1)
-        
-        lstm_out, _ = self.lstm(combined)
-        
-        output = self.fc_out(lstm_out.squeeze(1))
-        
-        return output

@@ -15,6 +15,7 @@ from torchvision import transforms
 import threading
 import pyautogui # Very important for window resize to work properly
 import AlienEnv.config as cfg
+from AlienEnv.utils import correct_heading
 
 class BumperTransform:
 
@@ -121,7 +122,7 @@ class GameState:
     
     def get_framestack(self):
         frames = self.frame_stack.get_framestack()
-        return self.preprocess(frames)[0]
+        return self.preprocess(frames)
 
     def get_raw_telemetry(self):
 
@@ -129,6 +130,7 @@ class GameState:
         x, z, y = list(self.telemetry.graphics.carCoordinates)
         fl_ws, fr_ws, rl_ws, rr_ws = list(self.telemetry.physics.wheelSlip)
         fl_sus, fr_sus, rl_sus, rr_sus = list(self.telemetry.physics.suspensionTravel)
+        front, rear, left, right, centre = list(self.telemetry.physics.carDamage)
 
         paused = False
         if (packetId == self.last_packet_id) or (self.prev_rl_sus == fl_sus):
@@ -138,16 +140,17 @@ class GameState:
 
         telemetry_dict = {}
         telemetry_dict["x"] = x
-        telemetry_dict["y"] = y
+        telemetry_dict["y"] = -1*y
         telemetry_dict["z"] = z
         telemetry_dict["speed"] = self.telemetry.physics.speedKmh
-        telemetry_dict["heading"] = self.telemetry.physics.heading
+        telemetry_dict["heading"] = correct_heading(self.telemetry.physics.heading)
         telemetry_dict["gear"] = self.telemetry.physics.gear
         telemetry_dict["steerAngle"] = self.telemetry.physics.steerAngle
         telemetry_dict["brake"] = self.telemetry.physics.brake
         telemetry_dict["gas"] = self.telemetry.physics.gas
         telemetry_dict["normalizedCarPosition"] = self.telemetry.graphics.normalizedCarPosition
         telemetry_dict["num_wheels_off_track"] = self.telemetry.physics.numberOfTyresOut
+        telemetry_dict["car_damage"] = centre
         telemetry_dict["fl_ws"] = fl_ws
         telemetry_dict["fr_ws"] = fr_ws
         telemetry_dict["rl_ws"] = rl_ws
@@ -176,12 +179,12 @@ class GameState:
         one_hot_tyres[self.telemetry.physics.numberOfTyresOut] = 1
 
         # Reducing telemetry
-        fl_ws_norm = np.clip((fl_ws - cfg.FL_WS_MEAN) / cfg.FL_WS_STD, -2, 2),
-        fr_ws_norm = np.clip((fr_ws - cfg.FR_WS_MEAN) / cfg.FR_WS_STD, -2, 2),
-        f_ws_norm = (fl_ws_norm + fr_ws_norm)/2
-        rl_ws_norm = np.clip((rl_ws - cfg.RL_WS_MEAN) / cfg.RL_WS_STD, -2, 2),
-        rr_ws_norm = np.clip((rr_ws - cfg.RR_WS_MEAN) / cfg.RR_WS_STD, -2, 2),
-        r_ws_norm = (rl_ws_norm + rr_ws_norm)/2
+        # fl_ws_norm = np.clip((fl_ws - cfg.FL_WS_MEAN) / cfg.FL_WS_STD, -2, 2),
+        # fr_ws_norm = np.clip((fr_ws - cfg.FR_WS_MEAN) / cfg.FR_WS_STD, -2, 2),
+        # f_ws_norm = (fl_ws_norm[0] + fr_ws_norm[0])/2
+        # rl_ws_norm = np.clip((rl_ws - cfg.RL_WS_MEAN) / cfg.RL_WS_STD, -2, 2),
+        # rr_ws_norm = np.clip((rr_ws - cfg.RR_WS_MEAN) / cfg.RR_WS_STD, -2, 2),
+        # r_ws_norm = (rl_ws_norm[0] + rr_ws_norm[0])/2
         
         norm_array = np.array([
             # (x - cfg.MIN_X ) / self.X_RANGE,

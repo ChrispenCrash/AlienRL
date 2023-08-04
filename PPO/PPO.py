@@ -34,6 +34,9 @@ class PPO:
         
         self.MseLoss = nn.MSELoss()
 
+        self.prev_action = None
+        self.max_delta_action = 0.01
+
     def set_action_sd(self, new_action_sd):
         self.action_sd = new_action_sd
         self.policy.set_action_sd(new_action_sd)
@@ -56,13 +59,22 @@ class PPO:
         with torch.no_grad():
 
             fs = torch.FloatTensor(state['framestack']).to(device)
-            fs = fs.view(1, 12,84,84)
+            fs = fs.view(1,3,84,84)
 
             tel = torch.FloatTensor(state['telemetry']).to(device)
+            tel = tel.view(1, -1)
             
             state = {'framestack': fs, 'telemetry': tel}
         
             action, action_logprob, state_val = self.policy_old.act(state)
+
+        # Clip action to not change more than 0.1 from previous action
+        # if self.prev_action is not None:
+        #     action = torch.clip(action, self.prev_action - self.max_delta_action, self.prev_action + self.max_delta_action)
+        #     self.prev_action = action
+
+        # if self.prev_action is None:
+        #     self.prev_action = action
 
         self.buffer.states.append(state)
         self.buffer.actions.append(action)
@@ -90,18 +102,17 @@ class PPO:
         # assuming self.buffer.states is a list of dictionaries
         framestack_states = torch.stack([state['framestack'] for state in self.buffer.states], dim=0)
         telemetry_states = torch.stack([state['telemetry'] for state in self.buffer.states], dim=0)
-
+        
         # apply squeeze, detach, and device transfer operations if necessary
         framestack_states = torch.squeeze(framestack_states).detach().to(device)
         telemetry_states = torch.squeeze(telemetry_states).detach().to(device)
-
+        
         # now old_states is a dictionary
         old_states = {'framestack': framestack_states, 'telemetry': telemetry_states}
         old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(device)
         old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(device)
         old_state_values = torch.squeeze(torch.stack(self.buffer.state_values, dim=0)).detach().to(device)
 
-        # calculate advantages
         # breakpoint()
         advantages = rewards.detach() - old_state_values.detach()
 

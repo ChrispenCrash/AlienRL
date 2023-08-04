@@ -43,8 +43,8 @@ batch_size = 512
 
 max_training_timesteps = 10_000_000  # break training loop if timesteps > max_training_timesteps
 
-print_freq = 10 # batch_size * 10
-save_model_freq = 25_000
+print_freq = 1 # batch_size * 10
+save_model_freq = 25_000 #
 
 # Starting standard deviation for action distribution
 action_sd = 0.6
@@ -53,7 +53,7 @@ action_sd_decay_rate = 0.05
 # Set minimum action standard deviation
 min_action_sd = 0.1                
 # action standard devation decay frequency
-action_sd_decay_freq = 250000
+action_sd_decay_freq = 1_000_000 # 250000
 
 # Batch/buffer size for training, should be multiple of batch_size
 # buffer_size = batch_size * 1  # 1024 - Converged faster, at 300k timesteps (ent_coef = 0.0)
@@ -61,7 +61,7 @@ buffer_size = batch_size * 4  # 4096 - Converged at 500k timesteps (ent_coef = 0
 # buffer_size = batch_size * 40 # 40960 - Converges at much slower rate and stable rate
 
 # Update policy for n epochs
-num_of_epochs = 8 #128 # 80
+num_of_epochs = 10 #128 # 80
 
 eps_clip = 0.2
 gamma = 0.99
@@ -86,6 +86,8 @@ writer = SummaryWriter(logs_dir)
 
 # initialize a PPO agent
 agent = PPO(state_dim, action_dim, lr_actor, lr_critic, gamma, num_of_epochs, eps_clip, ent_coef, vf_coef, action_sd)
+
+# agent.load("models/20230731_164515_0.001/" + "50000.pth")
 
 print("Initialisation complete.")
 
@@ -128,7 +130,7 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
             
             # Select action with policy
             action = agent.select_action(state)
-            state, reward, done, trunc, _ = env.step(action)
+            state, reward, done, trunc, info = env.step(action)
 
             # Saving reward and is_terminals
             agent.buffer.rewards.append(reward)
@@ -192,6 +194,7 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 
         writer.add_scalar('Reward', episode_reward, global_step=global_step_num)
         writer.add_scalar('Average Reward', avg_reward, global_step=global_step_num)
+        writer.add_scalar('Agent Train Time(s)', avg_agent_update_time, global_step=global_step_num)
 
         total_episodes += 1
 
