@@ -36,6 +36,7 @@ rr_suspension_travel = np.array([])
 
 force_feedback = np.array([])
 
+
 info = TelemetryData()
 
 
@@ -110,5 +111,5 @@ telemetry_df = pd.DataFrame({
     "rr_suspension_travel": rr_suspension_travel
 })
 
-telemetry_df.to_excel(f"data/nord_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", index=False)
+telemetry_df.to_excel(f"data/wheelslip_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx", index=False)
 print("...saved.")

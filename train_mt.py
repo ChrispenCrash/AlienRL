@@ -67,7 +67,7 @@ eps_clip = 0.2
 gamma = 0.99
 lr_actor = 0.0003
 lr_critic = 0.0003
-ent_coef = 0.001 # 0.001 # Increasing entropy coefficient helps exploration, 0 seems to be the best value
+ent_coef = 0.0 # 0.001 # 0.001 # Increasing entropy coefficient helps exploration, 0 seems to be the best value
 vf_coef = 0.5
 
 state_dim = sum(env.observation_space['framestack'].shape) + env.observation_space['telemetry'].shape[0]
@@ -78,7 +78,7 @@ action_dim = env.action_space.shape[0]
 checkpoint_path = "models" + '/' + f"{run_start_time}_{ent_coef}" + "/"
 
 if not os.path.exists(checkpoint_path):
-        os.makedirs(checkpoint_path)
+    os.makedirs(checkpoint_path)
 
 logs_dir = f"runs/{run_start_time}_{ent_coef}"
 

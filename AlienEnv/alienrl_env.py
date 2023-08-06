@@ -13,10 +13,7 @@ from AlienEnv.gamestate import GameState
 from AlienEnv.controller import GameController
 from AlienEnv.utils import correct_heading, get_nearest_points, get_line_direction_degrees, get_difference_in_degrees
 
-EPISODE_STEP_COUNT = 500
-
-def tanh(x):
-    return (math.exp(x) - math.exp(-x)) / (math.exp(x) + math.exp(-x))
+EPISODE_STEP_COUNT = 512
 
 def send_data(host, port, data):
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -131,10 +128,14 @@ class AlienRLEnv(gym.Env):
 
         done = False
 
-        # speed = raw_telemetry['speed']
+        speed = raw_telemetry['speed']
         current_norm_position = raw_telemetry['normalizedCarPosition']
         tyres_off_track = raw_telemetry['num_wheels_off_track']
         car_damage = raw_telemetry['car_damage']
+        fl_ws = raw_telemetry['fl_ws']
+        fr_ws = raw_telemetry['fr_ws']
+        rl_ws = raw_telemetry['rl_ws']
+        rr_ws = raw_telemetry['rr_ws']
 
         # Determine if the car is making progress
         if self.prev_norm_car_position is not None:
@@ -147,7 +148,9 @@ class AlienRLEnv(gym.Env):
             progress = 0
 
         # Penalize the car for going the wrong way
-        if progress < -0.01:
+        # Weird quirk, if the car is going the wrong way, normalizedCarPosition doesn't
+        # update as quick. -0.002 seems to be the sweet spot.
+        if progress < -0.002:
             print("Car going the wrong way, resetting.")
             progress_reward = -1500
             self.is_hard_reset = True
@@ -155,7 +158,7 @@ class AlienRLEnv(gym.Env):
         else:
             progress = progress * 10_000
             # Max progress should be (0.005 * 1000) = 5
-            progress_reward = tanh(progress)
+            progress_reward = max(math.tanh(2*progress),0)
 
         # Max speed ~285 km/h, so max reward is 285/50 = 5.7
         # speed_reward = max(speed,0) / 275
@@ -207,7 +210,19 @@ class AlienRLEnv(gym.Env):
         else:
             car_damage_penalty = 0
 
-        
+        ####### Wheel Slip #######
+
+        scaled_fl_ws = math.tanh(fl_ws)
+        scaled_fr_ws = math.tanh(fr_ws)
+        scaled_rl_ws = math.tanh(rl_ws)
+        scaled_rr_ws = math.tanh(rr_ws)
+
+        slip_penalty = 0
+        cutoff = 0.99999
+        if (scaled_fl_ws > cutoff or scaled_fr_ws > cutoff or scaled_rl_ws > cutoff or scaled_rr_ws > cutoff) and speed > 2:
+            slip_penalty = -10
+
+        ##########################
 
         car_x = raw_telemetry['x']
         car_y = raw_telemetry['y']
@@ -228,13 +243,17 @@ class AlienRLEnv(gym.Env):
         # print(progress_reward + on_track_reward + car_damage_penalty + orientation_reward)
         # print()
 
+        total_reward = progress_reward + on_track_reward + car_damage_penalty + orientation_reward + slip_penalty
+
         message = {"progress_reward": progress_reward, 
                    "on_track_reward": on_track_reward, 
                    "car_damage_penalty": car_damage_penalty, 
-                   "orientation_reward": orientation_reward}
+                   "orientation_reward": orientation_reward,
+                   "slip_penalty": slip_penalty,
+                   "total": total_reward}
         send_data('localhost', 12345, message)
 
-        return (progress_reward + on_track_reward + car_damage_penalty + orientation_reward), done
+        return total_reward, done
 
     def _calculate_episode_end(self, current_norm_car_position):
         multiple = math.ceil(current_norm_car_position/0.005)

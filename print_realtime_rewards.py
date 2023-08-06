@@ -23,11 +23,12 @@ def receive_data(host, port):
             on_track_reward = message['on_track_reward']
             car_damage_penalty = message['car_damage_penalty']
             orientation_reward = message['orientation_reward']
+            slip_penalty = message['slip_penalty']
+            total_reward = message['total']
 
-            total_reward = progress_reward + on_track_reward + car_damage_penalty + orientation_reward
 
-            print("Progress | On Track |  Damage |  Angle |  Total")
-            print(f"{progress_reward:6.2f}   | {on_track_reward:6.1f}   | {car_damage_penalty:7.1f} | {orientation_reward:6.2f} | {total_reward:6.1f}")
+            print("Progress | On Track |  Damage |  Angle |   Slip | Total")
+            print(f"{progress_reward:6.2f}   | {on_track_reward:6.2f}   | {car_damage_penalty:7.1f} | {orientation_reward:6.2f} | {slip_penalty:6.2f} | {total_reward:6.2f}")
             
             sleep(0.1)
             os.system("cls")

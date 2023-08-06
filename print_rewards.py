@@ -14,9 +14,6 @@ last_packet_id = 0
 prev_rl_suspensionTravel = None
 prev_norm_car_position = None
 
-def tanh(x):
-    return (math.exp(x) - math.exp(-x)) / (math.exp(x) + math.exp(-x))
-
 episode_length = 500
 episode_number = 1
 total_time_steps = 1
@@ -40,19 +37,44 @@ while True:
         print("Game is paused")
     else:
 
-        current_norm_position = telemetry.graphics.normalizedCarPosition
-        if prev_norm_car_position is None:
-            prev_norm_car_position = current_norm_position
-
         tyres_off_track = telemetry.physics.numberOfTyresOut
+        fl, fr, rl, rr = list(telemetry.physics.wheelSlip)
         front, rear, left, right, centre = list(telemetry.physics.carDamage)
         car_damage = centre
 
+        #############################################################
+
+        current_norm_position = telemetry.graphics.normalizedCarPosition
+        if prev_norm_car_position is None:
+            prev_norm_car_position = current_norm_position
+            
+
         progress = current_norm_position - prev_norm_car_position
 
-        progress_reward = progress * 10_000
+        # Check if the car has crossed the finish line
+        if progress < -0.5 and current_norm_position < 0.1:
+            progress = (1 + current_norm_position) - prev_norm_car_position
 
-        progress_reward_sig = np.tanh(progress_reward)
+        if progress < -0.002:
+            print("Car going the wrong way, resetting.")
+            progress_reward = -1500
+            break
+        else:
+            progress = progress * 10_000
+            # Max progress should be (0.005 * 1000) = 5
+            progress_reward = math.tanh(2*progress)
+
+        #############################################################
+
+        scaled_fl_ws = math.tanh(fl)
+        scaled_fr_ws = math.tanh(fr)
+        scaled_rl_ws = math.tanh(rl)
+        scaled_rr_ws = math.tanh(rr)
+
+        slip_penalty = 0
+        cutoff = 0.9999
+        if scaled_fl_ws > cutoff or scaled_fr_ws > cutoff or scaled_rl_ws > cutoff or scaled_rr_ws > cutoff:
+            slip_penalty = -5
 
 
         if tyres_off_track == 0:
@@ -84,15 +106,15 @@ while True:
 
         ################################
 
-        total_reward = progress_reward_sig + on_track_reward + car_damage_reward + distance_from_centre_line + orientation_reward
+        total_reward = progress_reward + on_track_reward + car_damage_reward + distance_from_centre_line + orientation_reward + slip_penalty
 
         episode_total_reward += total_reward
 
         if not print_episode:
             print(f"Episode: {episode_number}   Timesteps: {episode_time_steps}   Last episode reward: {last_episode_reward:.2f}")
-            print("Progress | On Track |  Damage |  Angle |  Total")
-            print(f"{progress_reward_sig:6.2f}   | {on_track_reward:6.1f}   | {car_damage_reward:7.1f} | {orientation_reward:6.2f} | {total_reward:6.1f}")
-            print(f"\nActual progress: {progress_reward:6.2f}")
+            print("Progress | On Track |  Damage |  Angle |  Slip | Total")
+            print(f"{progress_reward:6.2f}   | {on_track_reward:6.1f}   | {car_damage_reward:7.1f} | {orientation_reward:6.2f} | {slip_penalty:6.2f} | {total_reward:6.1f}")
+            print(f"\nActual progress: {progress_reward/2:6.2f}")
             if last_episode_time is not None:
                 print(f"Last episode time: {last_episode_time:.2f} seconds")
         else:

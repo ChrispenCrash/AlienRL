@@ -17,11 +17,13 @@ while True:
         print("Game is paused")
     else:
         last_packet_id = telemetry.graphics.packetId
+        completedLaps = telemetry.graphics.completedLaps
         rl_suspensionTravel = list(telemetry.physics.suspensionTravel)[0]
         print(telemetry.graphics.packetId)
         print(f"Car Model: {telemetry.static.carModel}")
         print(f"Track: {telemetry.static.track}")
         print(f"Position: {telemetry.graphics.position}")
+        print(f"Current Lap: {completedLaps+1}")
         print()
 
         if telemetry.physics.numberOfTyresOut >= 3:
