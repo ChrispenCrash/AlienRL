@@ -3,6 +3,7 @@ import os
 import cv2
 from PIL import Image
 import numpy as np
+import pandas as pd
 import win32gui
 import win32ui
 import win32con

@@ -125,7 +125,7 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
         state, _ = env.reset()
 
         # Potentially add 50% throttle for 2 seconds to get car moving
-        # env.controller.set_inputs([0.0,0.5])
+        # env.controller.set_inputs(0.0,0.5)
         # sleep(2)
         # env.controller.reset_inputs()
 

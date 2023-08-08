@@ -3,6 +3,7 @@ import os
 import time
 import keyboard
 import math
+from time import sleep
 import numpy as np
 import pandas as pd
 from math import radians
@@ -14,8 +15,8 @@ last_packet_id = 0
 prev_rl_suspensionTravel = None
 prev_norm_car_position = None
 
-episode_length = 500
-episode_number = 1
+episode_length = 512
+episode_number = 179
 total_time_steps = 1
 episode_time_steps = 1
 episode_total_reward = 0
@@ -58,13 +59,15 @@ while True:
 
         if progress < -0.002:
             print("Car going the wrong way, resetting.")
-            progress_reward = -1500
-            break
+            progress_reward = -512
+            # break
         else:
             progress = progress * 100_000
             # Max progress should be (0.005 * 1000) = 5
-            progress_reward = (2*max(math.tanh(2*progress),0))**2
+            progress_reward = (2*max(math.tanh(2*progress),0))
 
+        if progress_reward < 0.03:
+            progress_reward = -0.5
 
         #############################################################
 
@@ -89,7 +92,7 @@ while True:
             on_track_reward = -2
 
         if car_damage > 0:
-            car_damage_reward = -750
+            car_damage_reward = -300
         else:
             car_damage_reward = 0
 
@@ -141,6 +144,7 @@ while True:
 
     # average timestep length
     # time.sleep(0.042) # 0.1
+    sleep(0.0631) # 32.3 / 512
 
     if (total_time_steps % episode_length == 0) or car_damage > 0:
         episode_time_steps = 1
@@ -153,7 +157,7 @@ while True:
             print(f"Episode: {episode_number} | Total Reward: {episode_total_reward}")
         if car_damage > 0:
             print("Car damage detected!")
-            break
+            # break
         episode_total_reward = 0
 
     if not print_episode:
