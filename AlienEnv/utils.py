@@ -66,3 +66,17 @@ def correct_heading(heading):
     elif corrected_heading > math.pi:
         corrected_heading -= 2*math.pi
     return corrected_heading
+
+def dist_to_line( point1, point2, car_coord):
+    if (point2[0] - point1[0]) != 0:
+        m = (point2[1] - point1[1]) / (point2[0] - point1[0])
+        A = m
+        B = -1
+        C = point1[1] - m*point1[0]
+    else:
+        A = 1
+        B = 0
+        C = -point1[0]
+
+    dist = abs(A*car_coord[0] + B*car_coord[1] + C) / np.sqrt(A**2 + B**2)
+    return dist

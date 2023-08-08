@@ -159,7 +159,7 @@ class AlienRLEnv(gym.Env):
         else:
             progress = progress * 10_000
             # Max progress should be (0.005 * 1000) = 5
-            progress_reward = 2*max(math.tanh(2*progress),0)
+            progress_reward = 2*max(math.tanh(2*progress),0) # Try this next (2*max(math.tanh(2*progress),0))**2
 
         # Max speed ~285 km/h, so max reward is 285/50 = 5.7
         # speed_reward = max(speed,0) / 275
@@ -195,13 +195,13 @@ class AlienRLEnv(gym.Env):
         # if tyres_off_track == 0:
         #     off_track_penalty = 1
         if tyres_off_track == 0:
-            on_track_reward = 1.0
+            on_track_reward = 0
         elif tyres_off_track == 1:
-            on_track_reward = 0.75
+            on_track_reward = -0.25
         elif tyres_off_track == 2:
-            on_track_reward = 0.5
+            on_track_reward = -0.5
         else:
-            on_track_reward = -1.0
+            on_track_reward = -2
 
         # print(tyres_off_track, on_track_reward)
 
@@ -224,7 +224,7 @@ class AlienRLEnv(gym.Env):
         slip_penalty = 0.0
         cutoff = 0.99999
         if (scaled_fl_ws > cutoff or scaled_fr_ws > cutoff or scaled_rl_ws > cutoff or scaled_rr_ws > cutoff) and speed > 2:
-            slip_penalty = -10.0
+            slip_penalty = -5.0
 
         ##########################
 
@@ -234,7 +234,7 @@ class AlienRLEnv(gym.Env):
         car_coords = (car_x, car_y)
         point1, point2 = get_nearest_points(track_points, car_coords)
         theta = get_difference_in_degrees(car_heading, point1, point2)
-        orientation_reward = np.round(np.cos(radians(theta)),2)
+        orientation_reward = np.round(np.cos(radians(theta)),2) - 1
 
         ##########################
 
