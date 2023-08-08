@@ -53,8 +53,13 @@ action_sd = 0.6
 action_sd_decay_rate = 0.05        
 # Set minimum action standard deviation
 min_action_sd = 0.1                
+
 # action standard devation decay frequency
-action_sd_decay_freq = 1_000_000 # 250000
+action_sd_decay_freq = 1_000_000 # 250_000
+
+ent_coef_decay_freq = 1_000_000
+ent_coef_decay_rate = 10
+min_ent_coef_cutoff = 0.001
 
 # Batch/buffer size for training, should be multiple of batch_size
 # buffer_size = batch_size * 1  # 1024 - Converged faster, at 300k timesteps (ent_coef = 0.0)
@@ -68,7 +73,7 @@ eps_clip = 0.2
 gamma = 0.99
 lr_actor = 0.0003
 lr_critic = 0.0003
-ent_coef = 0.0 # 0.001 # 0.001 # Increasing entropy coefficient helps exploration, 0 seems to be the best value
+ent_coef = 0.01 # 0.001 # 0.001 # Increasing entropy coefficient helps exploration, 0 seems to be the best value
 vf_coef = 0.5
 
 state_dim = sum(env.observation_space['framestack'].shape) + env.observation_space['telemetry'].shape[0]
@@ -186,6 +191,10 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
             # Decay action std of ouput action distribution
             if global_step_num % action_sd_decay_freq == 0:
                 agent.decay_action_sd(action_sd_decay_rate, min_action_sd)
+
+            if global_step_num % ent_coef_decay_freq == 0:
+                # Should go to 0.001 after 1M steps, 0 after 2M steps
+                agent.decay_ent_coef(ent_coef_decay_rate, min_ent_coef_cutoff)
 
             if global_step_num % save_model_freq == 0:
                 print("Saving model...")

@@ -100,7 +100,7 @@ class AlienRLEnv(gym.Env):
             if (time.time() - self.coords_updated_time > 30) and raw_telemetry["num_wheels_off_track"] >= 3:
                 done = True
                 self.is_hard_reset = True
-                reward = -512
+                reward = -100
                 print("Car stuck for 20 seconds, restarting.")
                 self.coords_updated_time = time.time()
         else:
@@ -153,16 +153,17 @@ class AlienRLEnv(gym.Env):
         # update as quick. -0.002 seems to be the sweet spot.
         if progress < -0.002 and (current_norm_position > 0.1 or self.prev_norm_car_position > 0.1):
             print("Car going the wrong way, resetting.")
-            progress_reward = -200
+            progress_reward = -100
             self.is_hard_reset = True
             done = True
         else:
-            progress = progress * 50_000
+            progress = progress * 10_000 # 50_000
             # Max progress should be (0.005 * 1000) = 5
-            progress_reward = 2*max(math.tanh(progress),0) # Try this next (2*max(math.tanh(2*progress),0))**2
+            # progress_reward = 2*max(math.tanh(progress),0) # Try this next (2*max(math.tanh(2*progress),0))**2
+            progress_reward = max(progress,0)
 
         if progress_reward < 0.03:
-            progress_reward = -0.5
+            progress_reward = -2
 
         # Max speed ~285 km/h, so max reward is 285/50 = 5.7
         # speed_reward = max(speed,0) / 275
@@ -210,7 +211,7 @@ class AlienRLEnv(gym.Env):
 
         if car_damage > 0:
             print("Car damaged, restarting.")
-            car_damage_penalty = -200
+            car_damage_penalty = -50
             self.is_hard_reset = True
             self.current_norm_car_position = 0.0
             done = True
@@ -227,7 +228,7 @@ class AlienRLEnv(gym.Env):
         slip_penalty = 0.0
         cutoff = 0.99999
         if (scaled_fl_ws > cutoff or scaled_fr_ws > cutoff or scaled_rl_ws > cutoff or scaled_rr_ws > cutoff) and speed > 2:
-            slip_penalty = -5.0
+            slip_penalty = -2
 
         ##########################
 

@@ -60,6 +60,13 @@ class PPO:
             print("Setting actor output action standard deviation to: ", self.action_sd)
         self.set_action_sd(self.action_sd)
 
+    def decay_ent_coef(self, ent_coef_decay_rate, min_ent_coef_cutoff):
+        _ent_coef = self.ent_coef/ent_coef_decay_rate
+        if _ent_coef < min_ent_coef_cutoff:
+            self.ent_coef = 0
+        else:
+            self.ent_coef = _ent_coef
+
     def select_action(self, state):
 
         with torch.no_grad():

@@ -16,7 +16,7 @@ prev_rl_suspensionTravel = None
 prev_norm_car_position = None
 
 episode_length = 512
-episode_number = 179
+episode_number = 1
 total_time_steps = 1
 episode_time_steps = 1
 episode_total_reward = 0
@@ -33,6 +33,7 @@ last_episode_time = None
 while True:
 
     current_fl_suspension = list(telemetry.physics.suspensionTravel)[0]
+    start_time = time.time()
 
     if (telemetry.graphics.packetId == last_packet_id) or (prev_rl_suspensionTravel == list(telemetry.physics.suspensionTravel)[0]):
         print("Game is paused")
@@ -59,15 +60,16 @@ while True:
 
         if progress < -0.002:
             print("Car going the wrong way, resetting.")
-            progress_reward = -512
+            progress_reward = -100
             # break
         else:
-            progress = progress * 100_000
+            progress = progress * 10_000
             # Max progress should be (0.005 * 1000) = 5
-            progress_reward = (2*max(math.tanh(2*progress),0))
+            # progress_reward = 2*max(math.tanh(progress),0)
+            progress_reward = max(progress,0)
 
         if progress_reward < 0.03:
-            progress_reward = -0.5
+            progress_reward = -2
 
         #############################################################
 
@@ -92,7 +94,7 @@ while True:
             on_track_reward = -2
 
         if car_damage > 0:
-            car_damage_reward = -300
+            car_damage_reward = -100
         else:
             car_damage_reward = 0
 
@@ -123,8 +125,8 @@ while True:
 
         if not print_episode:
             print(f"Episode: {episode_number}   Timesteps: {episode_time_steps}   Last episode reward: {last_episode_reward:.2f}")
-            print("Progress | On Track |  Damage |  Angle |  Slip | Total")
-            print(f"{progress_reward:6.2f}   | {on_track_reward:6.1f}   | {car_damage_reward:7.1f} | {orientation_reward:6.2f} | {slip_penalty:6.2f} | {total_reward:6.1f}")
+            print("Progress | On Track |  Damage |  Angle |  Slip  | Total")
+            print(f"{progress_reward:6.2f}   | {on_track_reward:6.1f}   | {car_damage_reward:7.1f} | {orientation_reward:6.2f} | {slip_penalty:6.2f} | {total_reward:6.2f}")
             print(f"\nActual progress: {progress_reward/2:6.2f}")
             print(f"Distance from centreline: {dist_to_centreline:.2f}")
             print(f"{theta:.2f} degrees from centreline")
