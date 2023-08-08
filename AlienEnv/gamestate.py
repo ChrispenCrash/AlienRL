@@ -7,6 +7,7 @@ import win32gui
 import win32ui
 import win32con
 import torch
+from math import radians
 from AlienEnv.telemetry import TelemetryData
 from AlienEnv.framestack import FrameStack
 from collections import deque
@@ -15,7 +16,7 @@ from torchvision import transforms
 import threading
 import pyautogui # Very important for window resize to work properly
 import AlienEnv.config as cfg
-from AlienEnv.utils import correct_heading
+from AlienEnv.utils import correct_heading, get_nearest_points, get_difference_in_degrees
 
 class BumperTransform:
 
@@ -113,6 +114,10 @@ class GameState:
         self.X_RANGE = cfg.MAX_X - cfg.MIN_X
         self.Y_RANGE = cfg.MAX_Y - cfg.MIN_Y
         self.Z_RANGE = cfg.MAX_Z - cfg.MIN_Z
+
+        self.df = pd.read_parquet("AlienEnv/data/track_points4.parquet")
+        self.df['order'] = self.df['order'].astype(int)
+        self.track_points = [tuple(x) for x in self.df.values.tolist()]
     
     def get_cv2_frame(self):
         latest_frame = self.frame_stack.get_latest_frame()
@@ -175,8 +180,6 @@ class GameState:
         fl_ws, fr_ws, rl_ws, rr_ws = list(self.telemetry.physics.wheelSlip)
         fl_sus, fr_sus, rl_sus, rr_sus = list(self.telemetry.physics.suspensionTravel)
 
-        one_hot_tyres = np.zeros(5)
-        one_hot_tyres[self.telemetry.physics.numberOfTyresOut] = 1
 
         # Reducing telemetry
         # fl_ws_norm = np.clip((fl_ws - cfg.FL_WS_MEAN) / cfg.FL_WS_STD, -2, 2),
@@ -185,6 +188,31 @@ class GameState:
         # rl_ws_norm = np.clip((rl_ws - cfg.RL_WS_MEAN) / cfg.RL_WS_STD, -2, 2),
         # rr_ws_norm = np.clip((rr_ws - cfg.RR_WS_MEAN) / cfg.RR_WS_STD, -2, 2),
         # r_ws_norm = (rl_ws_norm[0] + rr_ws_norm[0])/2
+
+        ################################
+
+        # Car Orientation
+
+        car_x, car_z, car_y = list(self.telemetry.graphics.carCoordinates)
+        car_y = -1*car_y
+        car_heading = correct_heading(self.telemetry.physics.heading)
+        car_coords = (car_x, car_y)
+        point1, point2 = get_nearest_points(self.track_points, car_coords)
+        # track_direction = get_line_direction_degrees(point1, point2)
+        theta = get_difference_in_degrees(car_heading, point1, point2)
+        rads_from_centreline = radians(theta)
+
+        ################################
+
+        # Detect Wall Contact
+
+        front, rear, left, right, centre = list(self.telemetry.physics.carDamage)
+        if centre > 0:
+            wall_contact = 1
+        else:
+            wall_contact = 0
+
+        ################################
         
         norm_array = np.array([
             # (x - cfg.MIN_X ) / self.X_RANGE,
@@ -202,9 +230,11 @@ class GameState:
             np.clip(fl_sus, 0.05, 0.13) / 0.13,
             np.clip(fr_sus, 0.05, 0.13) / 0.13,
             np.clip(rl_sus, 0.06, 0.14) / 0.14,
-            np.clip(rr_sus, 0.06, 0.14) / 0.14
+            np.clip(rr_sus, 0.06, 0.14) / 0.14,
             # f_ws_norm,
-            # r_ws_norm
+            # r_ws_norm,
+            rads_from_centreline,
+            wall_contact
         ])
 
         one_hot_tyres = np.zeros(5)

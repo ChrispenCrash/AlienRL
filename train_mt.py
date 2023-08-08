@@ -11,7 +11,7 @@ import torch
 from PPO.PPO import PPO
 import numpy as np
 from collections import deque
-
+from time import sleep
 import copy
 import concurrent.futures
 from threading import Lock
@@ -123,6 +123,12 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 
         episode_start_time = datetime.now().replace(microsecond=0)
         state, _ = env.reset()
+
+        # Potentially add 50% throttle for 2 seconds to get car moving
+        # env.controller.set_inputs([0.0,0.5])
+        # sleep(2)
+        # env.controller.reset_inputs()
+
         episode_reward = 0
         done = False
         trunc = False

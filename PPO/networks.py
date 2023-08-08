@@ -576,7 +576,7 @@ class ActorNetwork(nn.Module):
         
         # Fully connected layers for telemetry data
         self.fc1 = nn.Sequential(
-            nn.Linear(16, 128),
+            nn.Linear(18, 128),
             nn.LeakyReLU(), # nn.LeakyReLU(),
             # nn.Dropout(0.2),
             nn.Linear(128, 128),
@@ -667,7 +667,7 @@ class CriticNetwork(nn.Module):
         
         # Fully connected layers for telemetry data
         self.fc1 = nn.Sequential(
-            nn.Linear(16, 128),
+            nn.Linear(18, 128),
             nn.LeakyReLU(), # nn.LeakyReLU(),
             # nn.Dropout(0.2),
             nn.Linear(128, 128),

@@ -157,9 +157,9 @@ class AlienRLEnv(gym.Env):
             self.is_hard_reset = True
             done = True
         else:
-            progress = progress * 10_000
+            progress = progress * 50_000
             # Max progress should be (0.005 * 1000) = 5
-            progress_reward = 2*max(math.tanh(2*progress),0) # Try this next (2*max(math.tanh(2*progress),0))**2
+            progress_reward = 2*max(math.tanh(progress),0) # Try this next (2*max(math.tanh(2*progress),0))**2
 
         # Max speed ~285 km/h, so max reward is 285/50 = 5.7
         # speed_reward = max(speed,0) / 275
@@ -207,7 +207,7 @@ class AlienRLEnv(gym.Env):
 
         if car_damage > 0:
             print("Car damaged, restarting.")
-            car_damage_penalty = -750
+            car_damage_penalty = -500
             self.is_hard_reset = True
             self.current_norm_car_position = 0.0
             done = True

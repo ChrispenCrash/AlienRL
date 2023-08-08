@@ -110,7 +110,7 @@ while True:
 
         dist_to_centreline = dist_to_line(point1, point2, (car_x, car_y))
 
-
+        ################################
 
         
 
@@ -124,6 +124,8 @@ while True:
             print(f"{progress_reward:6.2f}   | {on_track_reward:6.1f}   | {car_damage_reward:7.1f} | {orientation_reward:6.2f} | {slip_penalty:6.2f} | {total_reward:6.1f}")
             print(f"\nActual progress: {progress_reward/2:6.2f}")
             print(f"Distance from centreline: {dist_to_centreline:.2f}")
+            print(f"{theta:.2f} degrees from centreline")
+            print(f"{radians(theta):.2f} radians from centreline")
             if last_episode_time is not None:
                 print(f"Last episode time: {last_episode_time:.2f} seconds")
         else:
