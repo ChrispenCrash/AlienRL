@@ -9,6 +9,14 @@ telemetry = TelemetryData()
 last_packet_id = 0
 prev_rl_suspensionTravel = None
 
+max_x_vel = 0
+max_z_vel = 0
+max_y_vel = 0
+
+max_x_acc = 0
+max_z_acc = 0
+max_y_acc = 0
+
 while True:
 
     current_fl_suspension = list(telemetry.physics.suspensionTravel)[0]
@@ -65,9 +73,28 @@ while True:
         print()
         print("Local Velocity: ")
         x_vel, z_vel, y_vel = telemetry.physics.localVelocity
-        print(f"x: {round(x_vel,4)}")
-        print(f"y: {round(y_vel,4)}")
-        print(f"z: {round(z_vel,4)}")
+        if x_vel > abs(max_x_vel):
+            max_x_vel = x_vel
+        if y_vel > abs(max_y_vel):
+            max_y_vel = y_vel
+        if z_vel > abs(max_z_vel):
+            max_z_vel = z_vel
+        print(f"x: {round(max_x_vel,4)}")
+        print(f"y: {round(max_y_vel,4)}")
+        print(f"z: {round(max_z_vel,4)}")
+
+        print()
+        print("Local Acceleration: ")
+        x_acc, z_acc, y_acc = telemetry.physics.accG
+        if x_acc > abs(max_x_acc):
+            max_x_acc = x_acc
+        if y_acc > abs(max_y_acc):
+            max_y_acc = y_acc
+        if z_acc > abs(max_z_acc):
+            max_z_acc = z_acc
+        print(f"x: {round(max_x_acc,4)}")
+        print(f"y: {round(max_y_acc,4)}")
+        print(f"z: {round(max_z_acc,4)}")
 
         # print()
         # print("Local Angular Velocity: ")

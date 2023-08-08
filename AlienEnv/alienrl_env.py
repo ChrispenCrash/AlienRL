@@ -20,7 +20,7 @@ def send_data(host, port, data):
         s.connect((host, port))
         s.sendall(pickle.dumps(data))
 
-df = pd.read_parquet("AlienEnv/data/track_points.parquet")
+df = pd.read_parquet("AlienEnv/data/track_points4.parquet")
 df['order'] = df['order'].astype(int)
 track_points = [tuple(x) for x in df.values.tolist()]
 
@@ -97,7 +97,7 @@ class AlienRLEnv(gym.Env):
         current_coords = np.round(current_coords, 0)
         if self.prev_coords is not None and np.array_equal(self.prev_coords, current_coords):
             # If the car hasn't moved for more than 10 seconds, reset the environment
-            if time.time() - self.coords_updated_time > 20:
+            if (time.time() - self.coords_updated_time > 30) and raw_telemetry["num_wheels_off_track"] >= 3:
                 done = True
                 self.is_hard_reset = True
                 reward = -1000
@@ -118,6 +118,7 @@ class AlienRLEnv(gym.Env):
         info = raw_telemetry
 
         self.prev_norm_car_position = temp_current_norm_position
+        
 
         self.prev_steer_action = self.curr_steer_action
         self.prev_throttle_action = self.curr_throttle_action
@@ -150,15 +151,15 @@ class AlienRLEnv(gym.Env):
         # Penalize the car for going the wrong way
         # Weird quirk, if the car is going the wrong way, normalizedCarPosition doesn't
         # update as quick. -0.002 seems to be the sweet spot.
-        if progress < -0.002:
+        if progress < -0.002 and (current_norm_position > 0.1 or self.prev_norm_car_position > 0.1):
             print("Car going the wrong way, resetting.")
-            progress_reward = -1500
+            progress_reward = -1000
             self.is_hard_reset = True
             done = True
         else:
             progress = progress * 10_000
             # Max progress should be (0.005 * 1000) = 5
-            progress_reward = max(math.tanh(2*progress),0)
+            progress_reward = 2*max(math.tanh(2*progress),0)
 
         # Max speed ~285 km/h, so max reward is 285/50 = 5.7
         # speed_reward = max(speed,0) / 275
@@ -194,21 +195,24 @@ class AlienRLEnv(gym.Env):
         # if tyres_off_track == 0:
         #     off_track_penalty = 1
         if tyres_off_track == 0:
-            on_track_reward = 1
+            on_track_reward = 1.0
         elif tyres_off_track == 1:
             on_track_reward = 0.75
         elif tyres_off_track == 2:
             on_track_reward = 0.5
         else:
-            on_track_reward = -1
+            on_track_reward = -1.0
+
+        # print(tyres_off_track, on_track_reward)
 
         if car_damage > 0:
             print("Car damaged, restarting.")
-            car_damage_penalty = -1500
+            car_damage_penalty = -750
             self.is_hard_reset = True
+            self.current_norm_car_position = 0.0
             done = True
         else:
-            car_damage_penalty = 0
+            car_damage_penalty = 0.0
 
         ####### Wheel Slip #######
 
@@ -217,10 +221,10 @@ class AlienRLEnv(gym.Env):
         scaled_rl_ws = math.tanh(rl_ws)
         scaled_rr_ws = math.tanh(rr_ws)
 
-        slip_penalty = 0
+        slip_penalty = 0.0
         cutoff = 0.99999
         if (scaled_fl_ws > cutoff or scaled_fr_ws > cutoff or scaled_rl_ws > cutoff or scaled_rr_ws > cutoff) and speed > 2:
-            slip_penalty = -10
+            slip_penalty = -10.0
 
         ##########################
 
@@ -231,6 +235,8 @@ class AlienRLEnv(gym.Env):
         point1, point2 = get_nearest_points(track_points, car_coords)
         theta = get_difference_in_degrees(car_heading, point1, point2)
         orientation_reward = np.round(np.cos(radians(theta)),2)
+
+        ##########################
 
         # print(f"{progress=}")
         # print(f"{progress_reward=}")

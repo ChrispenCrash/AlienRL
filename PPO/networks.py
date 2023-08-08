@@ -558,57 +558,50 @@ class ActorNetwork(nn.Module):
         
         # Convolutional layers for image
         self.cnn = nn.Sequential(
-            nn.Conv2d(in_channels=12, out_channels=16, kernel_size=(4, 4), stride=2),
+            nn.Conv2d(in_channels=12, out_channels=32, kernel_size=(8, 8), stride=4),
+            nn.BatchNorm2d(32),
             nn.LeakyReLU(),
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(4, 4), stride=2),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(4, 4), stride=2),
+            nn.BatchNorm2d(64),
             nn.LeakyReLU(),
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), stride=2),
-            nn.LeakyReLU(),
-            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=(3, 3), stride=1),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), stride=2),
+            nn.BatchNorm2d(64),
             nn.LeakyReLU(),
             nn.Flatten(),
-            nn.Linear(1568, 256),
+            nn.Linear(1024, 256),
             nn.LeakyReLU(),
-            nn.Dropout(0.2),
             nn.Linear(256, 128),
             nn.LeakyReLU(),
-            nn.Dropout(0.2)
         )
         
         # Fully connected layers for telemetry data
         self.fc1 = nn.Sequential(
             nn.Linear(16, 128),
-            nn.LeakyReLU(),
-            nn.Dropout(0.2),
+            nn.LeakyReLU(), # nn.LeakyReLU(),
+            # nn.Dropout(0.2),
             nn.Linear(128, 128),
-            nn.LeakyReLU(),
-            nn.Dropout(0.2),
+            nn.LeakyReLU(), # nn.LeakyReLU(),
+            # nn.Dropout(0.2),
             nn.Linear(128, 128),
-            nn.LeakyReLU(),
-            nn.Dropout(0.2)
+            nn.LeakyReLU(), # nn.LeakyReLU(),
+            # nn.Dropout(0.2)
         )
-        
-        self.lstm = nn.LSTM(256, hidden_size=128, num_layers=2, batch_first=True)
         
         # Fully connected layer for output
         self.fc_out = nn.Sequential(
-            nn.Linear(128, 256),
-            nn.LeakyReLU(),
-            nn.Dropout(0.2),
             nn.Linear(256, 256),
-            nn.LeakyReLU(),
-            nn.Dropout(0.2),
+            nn.LeakyReLU(), # nn.LeakyReLU(),
+            # nn.Dropout(0.2),
+            nn.Linear(256, 256),
+            nn.LeakyReLU(), # nn.LeakyReLU(),
+            # nn.Dropout(0.2),
             nn.Linear(256, 64),
-            nn.LeakyReLU(),
-            nn.Dropout(0.2),
+            nn.LeakyReLU(), # nn.LeakyReLU(),
+            # nn.Dropout(0.2),
             nn.Linear(64, 2)
         )
 
-        self.fc_mu = nn.Linear(64, 2)
-        self.fc_log_std = nn.Linear(64, 2)
-
-        self.log_std_min = -20
-        self.log_std_max = 2
+        self.tanh = nn.Tanh()
 
         # Initialize weights
         self.apply(self.initialize_weights)
@@ -621,20 +614,15 @@ class ActorNetwork(nn.Module):
         batch_size, stack_size, C, H, W = framestack.size()
         cnn_in = framestack.view(batch_size, C*stack_size, H, W)
 
-        cnn = self.cnn(cnn_in)
-        fc1 = self.fc1(telemetry)
+        cnn_out = self.cnn(cnn_in)
+        fc1_out = self.fc1(telemetry)
+        
+        combined = torch.cat((cnn_out, fc1_out), dim=1)
 
-        if len(telemetry.shape) == 1:
-            telemetry = telemetry.unsqueeze(0)
-        
-        combined = torch.cat((cnn, fc1), dim=1)
-        
-        self.lstm.flatten_parameters()
-        lstm_out, _ = self.lstm(combined)
-        
-        output = self.fc_out(lstm_out.squeeze(1))
-        
-        return output
+        output =  self.fc_out(combined)
+
+        return self.tanh(output)
+    
     
     def initialize_weights(self, m):
         if isinstance(m, nn.Linear):
@@ -661,49 +649,46 @@ class CriticNetwork(nn.Module):
         
         # Convolutional layers for image
         self.cnn = nn.Sequential(
-            nn.Conv2d(in_channels=12, out_channels=16, kernel_size=(4, 4), stride=2),
+            nn.Conv2d(in_channels=12, out_channels=32, kernel_size=(8, 8), stride=4),
+            nn.BatchNorm2d(32),
             nn.LeakyReLU(),
-            nn.Conv2d(in_channels=16, out_channels=32, kernel_size=(4, 4), stride=2),
+            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(4, 4), stride=2),
+            nn.BatchNorm2d(64),
             nn.LeakyReLU(),
-            nn.Conv2d(in_channels=32, out_channels=64, kernel_size=(3, 3), stride=2),
-            nn.LeakyReLU(),
-            nn.Conv2d(in_channels=64, out_channels=32, kernel_size=(3, 3), stride=1),
+            nn.Conv2d(in_channels=64, out_channels=64, kernel_size=(3, 3), stride=2),
+            nn.BatchNorm2d(64),
             nn.LeakyReLU(),
             nn.Flatten(),
-            nn.Linear(1568, 256),
+            nn.Linear(1024, 256),
             nn.LeakyReLU(),
-            nn.Dropout(0.2),
             nn.Linear(256, 128),
             nn.LeakyReLU(),
-            nn.Dropout(0.2)
         )
         
         # Fully connected layers for telemetry data
         self.fc1 = nn.Sequential(
             nn.Linear(16, 128),
-            nn.LeakyReLU(),
-            nn.Dropout(0.2),
+            nn.LeakyReLU(), # nn.LeakyReLU(),
+            # nn.Dropout(0.2),
             nn.Linear(128, 128),
-            nn.LeakyReLU(),
-            nn.Dropout(0.2),
+            nn.LeakyReLU(), # nn.LeakyReLU(),
+            # nn.Dropout(0.2),
             nn.Linear(128, 128),
-            nn.LeakyReLU(),
-            nn.Dropout(0.2)
+            nn.LeakyReLU(), # nn.LeakyReLU(),
+            # nn.Dropout(0.2)
         )
-        
-        self.lstm = nn.LSTM(256, hidden_size=128, num_layers=2, batch_first=True)
         
         # Fully connected layer for output
         self.fc_out = nn.Sequential(
-            nn.Linear(128, 256),
-            nn.LeakyReLU(),
-            nn.Dropout(0.2),
             nn.Linear(256, 256),
-            nn.LeakyReLU(),
-            nn.Dropout(0.2),
+            nn.LeakyReLU(), # nn.LeakyReLU(),
+            # nn.Dropout(0.2),
+            nn.Linear(256, 256),
+            nn.LeakyReLU(), # nn.LeakyReLU(),
+            # nn.Dropout(0.2),
             nn.Linear(256, 64),
-            nn.LeakyReLU(),
-            nn.Dropout(0.2),
+            nn.LeakyReLU(), # nn.LeakyReLU(),
+            # nn.Dropout(0.2),
             nn.Linear(64, 1)
         )
 
@@ -718,20 +703,13 @@ class CriticNetwork(nn.Module):
         batch_size, stack_size, C, H, W = framestack.size()
         cnn_in = framestack.view(batch_size, C*stack_size, H, W)
 
-        cnn = self.cnn(cnn_in)
-        fc1 = self.fc1(telemetry)
+        cnn_out = self.cnn(cnn_in)
+        fc1_out = self.fc1(telemetry)
+        
+        combined = torch.cat((cnn_out, fc1_out), dim=1)
+        
+        return self.fc_out(combined)
 
-        if len(telemetry.shape) == 1:
-            telemetry = telemetry.unsqueeze(0)
-        
-        combined = torch.cat((cnn, fc1), dim=1)
-        
-        self.lstm.flatten_parameters()
-        lstm_out, _ = self.lstm(combined)
-        
-        output = self.fc_out(lstm_out.squeeze(1))
-        
-        return output
     
     def initialize_weights(self, m):
         if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):

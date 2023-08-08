@@ -14,6 +14,7 @@ from collections import deque
 
 import copy
 import concurrent.futures
+from threading import Lock
 
 from AlienEnv.alienrl_env import AlienRLEnv
 
@@ -85,7 +86,7 @@ logs_dir = f"runs/{run_start_time}_{ent_coef}"
 writer = SummaryWriter(logs_dir)
 
 # initialize a PPO agent
-agent = PPO(state_dim, action_dim, lr_actor, lr_critic, gamma, num_of_epochs, eps_clip, ent_coef, vf_coef, action_sd)
+agent = PPO(state_dim, action_dim, batch_size, buffer_size, lr_actor, lr_critic, gamma, num_of_epochs, eps_clip, ent_coef, vf_coef, action_sd)
 
 # agent.load("models/20230731_164515_0.001/" + "50000.pth")
 
@@ -132,7 +133,8 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
             action = agent.select_action(state)
             state, reward, done, trunc, info = env.step(action)
 
-            # Saving reward and is_terminals
+            # with PPO.buffer_lock:
+                # Saving reward and is_terminals
             agent.buffer.rewards.append(reward)
             agent.buffer.is_terminals.append(done or trunc)
 
@@ -143,23 +145,36 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
             if future and future.done():
                 agent_update_finish_time = datetime.now()
                 agent_update_times.append(agent_update_finish_time - agent_update_start_time)
+                # t1 = datetime.now()
                 agent = future.result() # replace the old agent with the new, updated one
-                print("Agent updated.")
+                # t2 = datetime.now()
+                print(f"Agent updated.")
                 agent.buffer.clear()
-                print("Buffer cleared.")
+                # t3 = datetime.now()
+                print(f"Buffer cleared.")
                 # print(f"{len(agent.buffer.states)=}")
                 # print(f"{len(agent.buffer.state_values)=}")
                 future = None
 
             # Update agent
-            if global_step_num % buffer_size == 0:
+            # if global_step_num % buffer_size == 0:
+            if len(agent.buffer.rewards) == buffer_size:
                 if not future: # only create a new future if the old one has finished
                     agent_update_start_time = datetime.now()
                     print("Updating agent...")
+                    # t4 = datetime.now()
                     new_agent = copy.deepcopy(agent) # create a copy of the current agent
-                    print("Agent copied.")
+                    # agent.save_weights('temp_weights.pth')
+                    # t5 = datetime.now()
+                    print(f"Agent weights saved.")
+                    # new_agent = PPO(state_dim, action_dim, batch_size, buffer_size, lr_actor, lr_critic, gamma, num_of_epochs, eps_clip, ent_coef, vf_coef, action_sd)
+                    # new_agent.load_weights('temp_weights.pth')
+                    t6 = datetime.now()
+                    print(f"Agent copied.")
+                    
                     # print(f"{len(new_agent.buffer.states)=}")
                     # print(f"{len(new_agent.buffer.state_values)=}")
+                    # with PPO.buffer_lock:
                     future = executor.submit(update_agent, new_agent) # update the new agent asynchronously
 
             # Decay action std of ouput action distribution
