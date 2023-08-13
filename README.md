@@ -5,6 +5,10 @@ In this project, we have developed a reinforcement learning environment for the 
 <table>
     <tr>
         <td colspan="2">
+            <video src='./Figures/alien_v1.mp4' width=700/>
+        </td>
+    <tr>
+        <td colspan="2">
             <img src="./Figures/AlienRL.png" width="700" alt="Alt text for the wide image" style="background-color:white; border: 10px solid white"> 
         </td>
     </tr>
