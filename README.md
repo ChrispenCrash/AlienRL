@@ -5,7 +5,7 @@ In this project, we have developed a reinforcement learning environment for the 
 <table>
     <tr>
         <td colspan="2">
-            <img src="./Figures/AlienRL.png" width="800" alt="Alt text for the wide image" style="border: 10px solid white"> 
+            <img src="./Figures/AlienRL.png" width="800" alt="Alt text for the wide image" style="background-color:white; border: 10px solid white"> 
         </td>
     </tr>
     <tr>
@@ -18,12 +18,12 @@ In this project, we have developed a reinforcement learning environment for the 
     </tr>
     <tr>
         <td colspan="2">
-            <img src="./Figures/Neural Network Architecture.png" width="800" alt="Alt text for the wide image" style="border: 10px solid white"> 
+            <img src="./Figures/Neural Network Architecture.png" width="800" alt="Alt text for the wide image" style="background-color:white; border: 10px solid white"> 
         </td>
     </tr>
     <tr>
         <td rowspan="2">
-            <img src="./Figures/preprocessed_framestack.png" width="400" alt="Alt text for the gif" style="border: 10px solid white">
+            <img src="./Figures/preprocessed_framestack.png" width="400" alt="Alt text for the gif" style="background-color:white; border: 10px solid white">
         </td>
         <td>
             <img src="./Figures/3rd person view.png" width="400" alt="Alt text for the gif" >
