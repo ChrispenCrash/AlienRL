@@ -9,7 +9,7 @@ In this project, we have developed a reinforcement learning environment for the 
         <td colspan="2">
             <a href="http://www.youtube.com/watch?feature=player_embedded&v=A5KJDpCzn-w
 " target="_blank"><img src="http://img.youtube.com/vi/A5KJDpCzn-w/0.jpg" 
-alt="AlienRL" width="240" height="180" border="10" /></a>   
+alt="AlienRL" width="600" height="400" border="10" /></a>   
         </td>
     </tr>
     <tr>
