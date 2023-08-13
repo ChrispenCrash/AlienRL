@@ -2,14 +2,16 @@
 
 In this project, we have developed a reinforcement learning environment for the racing simulator Assetto Corsa. The environment is based on the OpenAI Gym interface and is designed to be used with the Proximal Policy Optimization (PPO) algorithm. The environment is designed to be used with the [Assetto Corsa Content Manager](https://assettocorsa.club/content-manager.html).
 
-[![AlienRL](https://img.youtube.com/vi/A5KJDpCzn-w/0.jpg)](https://www.youtube.com/watch?v=A5KJDpCzn-w)
+<!-- [![AlienRL](https://img.youtube.com/vi/A5KJDpCzn-w/0.jpg)](https://www.youtube.com/watch?v=A5KJDpCzn-w) -->
 
 <table>
-    <!-- <tr>
+    <tr>
         <td colspan="2">
-            
+            <a href="http://www.youtube.com/watch?feature=player_embedded&v=A5KJDpCzn-w
+" target="_blank"><img src="http://img.youtube.com/vi/A5KJDpCzn-w/0.jpg" 
+alt="AlienRL" width="240" height="180" border="10" /></a>   
         </td>
-    </tr> -->
+    </tr>
     <tr>
         <td colspan="2">
             <img src="./Figures/AlienRL.png" width="600" alt="Alt text for the wide image" style="background-color:white; border: 10px solid white"> 
