@@ -1,0 +1,3 @@
+Upon the creation of the conda environment "torch-gpu" (included in the .yml file attached).
+Either run running the command `python train_mt.py` or run the AlienRL.ipynb notebook.
+Assetto Corsa running in windowed mode of 1280x720 is required for this code to run correctly.
