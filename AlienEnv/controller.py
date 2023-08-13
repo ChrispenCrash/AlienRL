@@ -82,10 +82,11 @@ class GameController():
         # self.gamepad.release_button(button=vg.XUSB_BUTTON.XUSB_GAMEPAD_START)
         # self.gamepad.update()
         self.focus_window()
-        sleep(0.5)
-        ctypes.windll.user32.keybd_event(0x1B, 0, KEYEVENTF_KEYDOWN, 0)
         sleep(0.25)
+        ctypes.windll.user32.keybd_event(0x1B, 0, KEYEVENTF_KEYDOWN, 0)
+        sleep(0.5)
         ctypes.windll.user32.keybd_event(0x1B, 0, KEYEVENTF_KEYUP, 0)
+        pyautogui.click(x=647, y=881)
 
     def focus_window(self):
         # Bring window to front

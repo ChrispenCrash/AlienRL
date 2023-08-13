@@ -11,9 +11,9 @@ from gymnasium import spaces
 
 from AlienEnv.gamestate import GameState
 from AlienEnv.controller import GameController
-from AlienEnv.utils import correct_heading, get_nearest_points, get_line_direction_degrees, get_difference_in_degrees
+from AlienEnv.utils import correct_heading, get_nearest_points, get_line_direction_degrees, get_difference_in_degrees, dist_to_line
 
-EPISODE_STEP_COUNT = 512
+EPISODE_STEP_COUNT = 2048  #1024 # 512
 
 def send_data(host, port, data):
     with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
@@ -100,7 +100,7 @@ class AlienRLEnv(gym.Env):
             if (time.time() - self.coords_updated_time > 30) and raw_telemetry["num_wheels_off_track"] >= 3:
                 done = True
                 self.is_hard_reset = True
-                reward = -100
+                reward = -10
                 print("Car stuck for 20 seconds, restarting.")
                 self.coords_updated_time = time.time()
         else:
@@ -151,19 +151,24 @@ class AlienRLEnv(gym.Env):
         # Penalize the car for going the wrong way
         # Weird quirk, if the car is going the wrong way, normalizedCarPosition doesn't
         # update as quick. -0.002 seems to be the sweet spot.
-        if progress < -0.002 and (current_norm_position > 0.1 or self.prev_norm_car_position > 0.1):
-            print("Car going the wrong way, resetting.")
-            progress_reward = -100
-            self.is_hard_reset = True
-            done = True
-        else:
-            progress = progress * 10_000 # 50_000
-            # Max progress should be (0.005 * 1000) = 5
-            # progress_reward = 2*max(math.tanh(progress),0) # Try this next (2*max(math.tanh(2*progress),0))**2
-            progress_reward = max(progress,0)
+        # if progress < -0.002 and (current_norm_position > 0.1 or self.prev_norm_car_position > 0.1):
+        #     print("Car going the wrong way, resetting.")
+        #     progress_reward = -10
+        #     self.is_hard_reset = True
+        #     done = True
+        # else:
+        progress = progress * 10_000 # 50_000
+        # Max progress should be (0.005 * 1000) = 5
+        # progress_reward = 2*max(math.tanh(progress),0) # Try this next (2*max(math.tanh(2*progress),0))**2
+        progress_reward = 5*math.tanh(max(progress,0))
 
-        if progress_reward < 0.03:
-            progress_reward = -2
+        if progress_reward == 0.0 and raw_telemetry['brake'] > 0.0:
+            progress_reward = -10
+
+        speed_reward = speed / 275
+
+        # if progress_reward < 0.03:
+        #     progress_reward = -2
 
         # Max speed ~285 km/h, so max reward is 285/50 = 5.7
         # speed_reward = max(speed,0) / 275
@@ -211,7 +216,14 @@ class AlienRLEnv(gym.Env):
 
         if car_damage > 0:
             print("Car damaged, restarting.")
-            car_damage_penalty = -50
+            if self.step_count > 200:
+                car_damage_penalty = -10
+            elif self.step_count > 100:
+                car_damage_penalty = -5
+            elif self.step_count > 50:
+                car_damage_penalty = -1
+            else:
+                car_damage_penalty = 0
             self.is_hard_reset = True
             self.current_norm_car_position = 0.0
             done = True
@@ -230,6 +242,8 @@ class AlienRLEnv(gym.Env):
         if (scaled_fl_ws > cutoff or scaled_fr_ws > cutoff or scaled_rl_ws > cutoff or scaled_rr_ws > cutoff) and speed > 2:
             slip_penalty = -2
 
+        # slip_penalty = 0
+
         ##########################
 
         car_x = raw_telemetry['x']
@@ -238,7 +252,11 @@ class AlienRLEnv(gym.Env):
         car_coords = (car_x, car_y)
         point1, point2 = get_nearest_points(track_points, car_coords)
         theta = get_difference_in_degrees(car_heading, point1, point2)
-        orientation_reward = np.round(np.cos(radians(theta)),2) - 1
+        orientation_reward = np.round(np.cos(radians(5*theta)),2) - 1
+
+        ##########################
+
+        dist_to_centreline = round(-1* abs(dist_to_line(point1, point2, (car_x, car_y))) / 3,2)
 
         ##########################
 
@@ -253,7 +271,10 @@ class AlienRLEnv(gym.Env):
         # print(progress_reward + on_track_reward + car_damage_penalty + orientation_reward)
         # print()
 
-        total_reward = progress_reward + on_track_reward + car_damage_penalty + orientation_reward + slip_penalty
+        total_reward = progress_reward + on_track_reward + car_damage_penalty + orientation_reward + slip_penalty + dist_to_centreline + speed_reward
+
+        # Clip reward
+        total_reward = max(total_reward, -2)
 
         message = {"progress_reward": progress_reward, 
                    "on_track_reward": on_track_reward, 
@@ -294,6 +315,7 @@ class AlienRLEnv(gym.Env):
             self.controller.reset_inputs()
             # breakpoint()
             self.controller.restart_session()
+            # self.controller.rewind_time(seconds=self.rewind_time)
             self.coords_updated_time = time.time()
             # self.current_norm_car_position = raw_telemetry["normalizedCarPosition"]
             # self.episode_end = self._calculate_episode_end(self.current_norm_car_position)

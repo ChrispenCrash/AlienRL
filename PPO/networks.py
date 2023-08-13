@@ -578,26 +578,20 @@ class ActorNetwork(nn.Module):
         self.fc1 = nn.Sequential(
             nn.Linear(18, 128),
             nn.LeakyReLU(), # nn.LeakyReLU(),
-            # nn.Dropout(0.2),
+            nn.Dropout(0.2),
             nn.Linear(128, 128),
             nn.LeakyReLU(), # nn.LeakyReLU(),
-            # nn.Dropout(0.2),
-            nn.Linear(128, 128),
-            nn.LeakyReLU(), # nn.LeakyReLU(),
-            # nn.Dropout(0.2)
+            nn.Dropout(0.2)
         )
         
         # Fully connected layer for output
         self.fc_out = nn.Sequential(
             nn.Linear(256, 256),
             nn.LeakyReLU(), # nn.LeakyReLU(),
-            # nn.Dropout(0.2),
-            nn.Linear(256, 256),
-            nn.LeakyReLU(), # nn.LeakyReLU(),
-            # nn.Dropout(0.2),
+            nn.Dropout(0.2),
             nn.Linear(256, 64),
             nn.LeakyReLU(), # nn.LeakyReLU(),
-            # nn.Dropout(0.2),
+            nn.Dropout(0.2),
             nn.Linear(64, 2)
         )
 
@@ -669,26 +663,20 @@ class CriticNetwork(nn.Module):
         self.fc1 = nn.Sequential(
             nn.Linear(18, 128),
             nn.LeakyReLU(), # nn.LeakyReLU(),
-            # nn.Dropout(0.2),
+            nn.Dropout(0.2),
             nn.Linear(128, 128),
             nn.LeakyReLU(), # nn.LeakyReLU(),
-            # nn.Dropout(0.2),
-            nn.Linear(128, 128),
-            nn.LeakyReLU(), # nn.LeakyReLU(),
-            # nn.Dropout(0.2)
+            nn.Dropout(0.2)
         )
         
         # Fully connected layer for output
         self.fc_out = nn.Sequential(
             nn.Linear(256, 256),
             nn.LeakyReLU(), # nn.LeakyReLU(),
-            # nn.Dropout(0.2),
-            nn.Linear(256, 256),
-            nn.LeakyReLU(), # nn.LeakyReLU(),
-            # nn.Dropout(0.2),
+            nn.Dropout(0.2),
             nn.Linear(256, 64),
             nn.LeakyReLU(), # nn.LeakyReLU(),
-            # nn.Dropout(0.2),
+            nn.Dropout(0.2),
             nn.Linear(64, 1)
         )
 
@@ -722,3 +710,51 @@ class CriticNetwork(nn.Module):
                     nn.init.orthogonal_(param.data)
                 elif 'bias' in name:
                     nn.init.zeros_(param.data)
+
+
+
+class SimpleActorNetwork(nn.Module):
+    def __init__(self):
+        super(SimpleActorNetwork, self).__init__()
+        self.network = nn.Sequential(
+            nn.Linear(18, 64),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(64, 128),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(64, 2),
+            nn.Tanh()
+        )
+        
+    def forward(self, state):
+
+        framestack = state['framestack']
+        telemetry = state['telemetry']
+
+        return self.network(telemetry)
+
+class SimpleCriticNetwork(nn.Module):
+    def __init__(self):
+        super(SimpleCriticNetwork, self).__init__()
+        self.network = nn.Sequential(
+            nn.Linear(18, 64),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(64, 128),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(128, 64),
+            nn.ReLU(),
+            nn.Dropout(0.2),
+            nn.Linear(64, 1)
+        )
+        
+    def forward(self, state):
+        framestack = state['framestack']
+        telemetry = state['telemetry']
+
+        return self.network(telemetry)

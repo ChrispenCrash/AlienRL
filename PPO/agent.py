@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 from torch.distributions import MultivariateNormal
-from PPO.networks import ActorNetwork, CriticNetwork
+from PPO.networks import ActorNetwork, CriticNetwork, SimpleActorNetwork, SimpleCriticNetwork
 
 
 class ActorCritic(nn.Module):
@@ -13,8 +13,11 @@ class ActorCritic(nn.Module):
         self.action_dim = int(action_dim)
         self.action_var = torch.full((self.action_dim,), action_sd_init * action_sd_init).to(self.device)
 
-        self.actor = ActorNetwork()
-        self.critic = CriticNetwork()
+        # self.actor = ActorNetwork()
+        # self.critic = CriticNetwork()
+
+        self.actor = SimpleActorNetwork()
+        self.critic = SimpleCriticNetwork()
         
     def set_action_sd(self, new_action_sd):
         self.action_var = torch.full((self.action_dim,), new_action_sd * new_action_sd).to(self.device)

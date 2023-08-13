@@ -66,10 +66,13 @@ while True:
             progress = progress * 10_000
             # Max progress should be (0.005 * 1000) = 5
             # progress_reward = 2*max(math.tanh(progress),0)
-            progress_reward = max(progress,0)
+            progress_reward = math.tanh(max(progress,0))
 
-        if progress_reward < 0.03:
-            progress_reward = -2
+        if progress_reward == 0.0 and telemetry.physics.brake > 0.0:
+            progress_reward = -0.5
+
+        # if progress_reward < 0.03:
+        #     progress_reward = -2
 
         #############################################################
 
@@ -82,6 +85,7 @@ while True:
         cutoff = 0.99999
         if (scaled_fl_ws > cutoff or scaled_fr_ws > cutoff or scaled_rl_ws > cutoff or scaled_rr_ws > cutoff) and speed > 2:
             slip_penalty = -5.0
+        slip_penalty = 0
 
 
         if tyres_off_track == 0:
@@ -94,12 +98,15 @@ while True:
             on_track_reward = -2
 
         if car_damage > 0:
-            car_damage_reward = -100
+            car_damage_penalty = -1
         else:
-            car_damage_reward = 0
+            car_damage_penalty = 0.0
 
-        distance_from_centre_line = 0
+        ################################
 
+        speed_reward = speed / 275
+
+        
         ################################
 
         car_x, car_z, car_y = list(telemetry.graphics.carCoordinates)
@@ -109,26 +116,34 @@ while True:
         point1, point2 = get_nearest_points(track_points, car_coords)
         # track_direction = get_line_direction_degrees(point1, point2)
         theta = get_difference_in_degrees(car_heading, point1, point2)
-        orientation_reward = np.round(np.cos(radians(theta)),2) - 1
+        orientation_reward = (np.round(np.cos(radians(5*theta)),2) - 1)
 
         ################################
 
-        dist_to_centreline = dist_to_line(point1, point2, (car_x, car_y))
+        dist_to_centreline = round(-1* abs(dist_to_line(point1, point2, (car_x, car_y))) / 3,2)
 
         ################################
-
         
 
-        total_reward = progress_reward + on_track_reward + car_damage_reward + distance_from_centre_line + orientation_reward + slip_penalty
+        total_reward = progress_reward + on_track_reward + car_damage_penalty + dist_to_centreline + orientation_reward + slip_penalty + speed_reward
 
         episode_total_reward += total_reward
 
         if not print_episode:
             print(f"Episode: {episode_number}   Timesteps: {episode_time_steps}   Last episode reward: {last_episode_reward:.2f}")
-            print("Progress | On Track |  Damage |  Angle |  Slip  | Total")
-            print(f"{progress_reward:6.2f}   | {on_track_reward:6.1f}   | {car_damage_reward:7.1f} | {orientation_reward:6.2f} | {slip_penalty:6.2f} | {total_reward:6.2f}")
+            print()
+            print(f"Progress: {progress_reward:6.2f}")
+            print(f"Speed: {speed_reward:9.2f}")
+            print(f"On Track: {on_track_reward:6.2f}")
+            print(f"Damage: {car_damage_penalty:8.2f}")
+            print(f"Angle: {orientation_reward:9.2f}")
+            print(f"Dist: {dist_to_centreline:10.2f}")
+            print(f"Slip: {slip_penalty:10.2f}")
+            print(f"Total: {total_reward:9.2f}")
+            print()
             print(f"\nActual progress: {progress_reward/2:6.2f}")
-            print(f"Distance from centreline: {dist_to_centreline:.2f}")
+            print(f"Distance from centreline: {dist_to_centreline*-2.5:.2f}")
+            print(f"Distance from centreline norm: {dist_to_centreline:.2f}")
             print(f"{theta:.2f} degrees from centreline")
             print(f"{radians(theta):.2f} radians from centreline")
             if last_episode_time is not None:
@@ -146,7 +161,7 @@ while True:
 
     # average timestep length
     # time.sleep(0.042) # 0.1
-    sleep(0.0631) # 32.3 / 512
+    sleep(0.05) # 32.3 / 512
 
     if (total_time_steps % episode_length == 0) or car_damage > 0:
         episode_time_steps = 1

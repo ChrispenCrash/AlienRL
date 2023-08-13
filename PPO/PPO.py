@@ -14,12 +14,14 @@ if(torch.cuda.is_available()):
 class PPO:
 
     # Class variable that will be shared with the new and old policy
-    buffer = PPOMemory()
+    
     # buffer_lock = Lock()
 
     def __init__(self, state_dim, action_dim, batch_size, buffer_size, lr_actor, lr_critic, gamma, num_of_epochs, eps_clip, ent_coef, vf_coef, action_sd_init=0.6):
 
         self.action_sd = action_sd_init
+
+        self.buffer = PPOMemory()
 
         self.batch_size = batch_size
         self.buffer_size = buffer_size
@@ -106,13 +108,15 @@ class PPO:
     def update(self):
         # with self.buffer_lock:
         # Monte Carlo estimate of returns
+        # print(len(self.buffer.rewards), len(self.buffer.is_terminals))
         rewards = []
         discounted_reward = 0
-        for reward, is_terminal in zip(reversed(self.buffer.rewards[-self.buffer_size:]), reversed(self.buffer.is_terminals[-self.buffer_size:])):
+        for reward, is_terminal in zip(reversed(self.buffer.rewards), reversed(self.buffer.is_terminals)):
             if is_terminal:
                 discounted_reward = 0
             discounted_reward = reward + (self.gamma * discounted_reward)
             rewards.insert(0, discounted_reward)
+        # print(len(rewards), len(self.buffer.state_values), self.buffer_size)
             
         # Normalizing the rewards
         rewards = torch.tensor(rewards, dtype=torch.float32).to(device)
@@ -121,8 +125,8 @@ class PPO:
         # convert list to tensor
         # breakpoint()
         # assuming self.buffer.states is a list of dictionaries
-        framestack_states = torch.stack([state['framestack'] for state in self.buffer.states[-self.buffer_size:]], dim=0)
-        telemetry_states = torch.stack([state['telemetry'] for state in self.buffer.states[-self.buffer_size:]], dim=0)
+        framestack_states = torch.stack([state['framestack'] for state in self.buffer.states], dim=0)
+        telemetry_states = torch.stack([state['telemetry'] for state in self.buffer.states], dim=0)
         
         # apply squeeze, detach, and device transfer operations if necessary
         framestack_states = torch.squeeze(framestack_states).detach().to(device)
@@ -130,16 +134,19 @@ class PPO:
         
         # now old_states is a dictionary
         old_states = {'framestack': framestack_states, 'telemetry': telemetry_states}
-        old_actions = torch.squeeze(torch.stack(self.buffer.actions[-self.buffer_size:], dim=0)).detach().to(device)
-        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs[-self.buffer_size:], dim=0)).detach().to(device)
-        old_state_values = torch.squeeze(torch.stack(self.buffer.state_values[-self.buffer_size:], dim=0)).detach().to(device)
+        old_actions = torch.squeeze(torch.stack(self.buffer.actions, dim=0)).detach().to(device)
+        old_logprobs = torch.squeeze(torch.stack(self.buffer.logprobs, dim=0)).detach().to(device)
+        old_state_values = torch.squeeze(torch.stack(self.buffer.state_values, dim=0)).detach().to(device)
 
         # breakpoint()
-        if len(rewards) != self.buffer_size:
-            print("rewards: ", len(rewards))
-            print("old_state_values: ", len(old_state_values))
-        # assert(len(rewards)==self.buffer_size)
-        # assert(len(old_state_values)==self.buffer_size)
+        # if len(rewards) != self.buffer_size:
+        #     print("rewards: ", len(rewards))
+        #     print("old_state_values: ", len(old_state_values))
+        # print(len(rewards), len(old_state_values), self.buffer_size)
+        assert len(rewards) == self.buffer_size, f"Rewards not equal to buffer size: {len(rewards)}"
+        assert len(old_state_values) == self.buffer_size, f"Old state values not equal to buffer size {len(old_state_values)}"
+        assert len(old_state_values ) == len(rewards), f"Old state values not equal to rewards: {len(old_state_values)} != {len(rewards)}"
+
         advantages = rewards.detach() - old_state_values.detach()
 
         # Optimize policy for n number of epochs

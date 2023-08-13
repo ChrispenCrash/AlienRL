@@ -17,6 +17,7 @@ import concurrent.futures
 from threading import Lock
 
 from AlienEnv.alienrl_env import AlienRLEnv
+from AlienEnv.utils import ActionSmoother
 
 # # Create a custom formatter without the level name
 # formatter = logging.Formatter('%(message)s')
@@ -40,7 +41,7 @@ env_name = "AlienRLEnv"
 env = AlienRLEnv()
 
 # Not implemented in current version, currently, batch_size = buffer_size
-batch_size = 512
+batch_size = 1024
 
 max_training_timesteps = 10_000_000  # break training loop if timesteps > max_training_timesteps
 
@@ -67,9 +68,9 @@ buffer_size = batch_size * 4  # 4096 - Converged at 500k timesteps (ent_coef = 0
 # buffer_size = batch_size * 40 # 40960 - Converges at much slower rate and stable rate
 
 # Update policy for n epochs
-num_of_epochs = 10 #128 # 80
+num_of_epochs = 128 # 128 # 80 # 10
 
-eps_clip = 0.2
+eps_clip = 0.3
 gamma = 0.99
 lr_actor = 0.0003
 lr_critic = 0.0003
@@ -93,7 +94,7 @@ writer = SummaryWriter(logs_dir)
 # initialize a PPO agent
 agent = PPO(state_dim, action_dim, batch_size, buffer_size, lr_actor, lr_critic, gamma, num_of_epochs, eps_clip, ent_coef, vf_coef, action_sd)
 
-# agent.load("models/20230731_164515_0.001/" + "50000.pth")
+agent.load("best_model.pth")
 
 print("Initialisation complete.")
 
@@ -123,11 +124,33 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 
     future = None
 
+    smoother = ActionSmoother(alpha=0.8)
+
+    env.controller.set_inputs(0.0,0.5)
+
     # training loop
     while global_step_num <= max_training_timesteps:
 
         episode_start_time = datetime.now().replace(microsecond=0)
+
+        
+        # Logic to update everytime the car crashes
+        # if env.is_hard_reset:
+        #     print("Hard reset detected.2")
+        #     if len(agent.buffer.rewards) >= buffer_size:
+        #         if len(agent.buffer.rewards) > 16384:
+        #             agent.buffer.actions = agent.buffer.actions[-16384:]
+        #             agent.buffer.rewards = agent.buffer.rewards[-16384:]
+        #             agent.buffer.states = agent.buffer.states[-16384:]
+        #             agent.buffer.logprobs = agent.buffer.logprobs[-16384:]
+        #             agent.buffer.state_values = agent.buffer.state_values[-16384:]
+        #             agent.buffer.is_terminals = agent.buffer.is_terminals[-16384:]
+        #         # wait for car to crash before updating agent
+        #         agent.update()
+        #         env.controller.set_inputs(0.0,0.5)
+        
         state, _ = env.reset()
+
 
         # Potentially add 50% throttle for 2 seconds to get car moving
         # env.controller.set_inputs(0.0,0.5)
@@ -140,23 +163,12 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 
         while not done and not trunc:
             
-            # Select action with policy
-            action = agent.select_action(state)
-            state, reward, done, trunc, info = env.step(action)
-
-            # with PPO.buffer_lock:
-                # Saving reward and is_terminals
-            agent.buffer.rewards.append(reward)
-            agent.buffer.is_terminals.append(done or trunc)
-
-            global_step_num += 1
-            episode_reward += reward
-
-            # Collect updated agent
+            # # Collect updated agent
             if future and future.done():
                 agent_update_finish_time = datetime.now()
                 agent_update_times.append(agent_update_finish_time - agent_update_start_time)
                 # t1 = datetime.now()
+                # agent.buffer.clear()
                 agent = future.result() # replace the old agent with the new, updated one
                 # t2 = datetime.now()
                 print(f"Agent updated.")
@@ -167,17 +179,34 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
                 # print(f"{len(agent.buffer.state_values)=}")
                 future = None
 
+            # print(len(agent.buffer.states), len(agent.buffer.actions), len(agent.buffer.logprobs),len(agent.buffer.state_values),len(agent.buffer.rewards))
+            
+            action = agent.select_action(state)
+            smoothed_action = smoother.smooth(action)
+
+            state, reward, done, trunc, info = env.step(smoothed_action)
+
+            # with PPO.buffer_lock:
+                # Saving reward and is_terminals
+            agent.buffer.rewards.append(reward)
+            agent.buffer.is_terminals.append(done or trunc)
+
+            global_step_num += 1
+            episode_reward += reward
+
             # Update agent
             # if global_step_num % buffer_size == 0:
             if len(agent.buffer.rewards) == buffer_size:
+            # if global_step_num % buffer_size == 0:
                 if not future: # only create a new future if the old one has finished
                     agent_update_start_time = datetime.now()
                     print("Updating agent...")
                     # t4 = datetime.now()
                     new_agent = copy.deepcopy(agent) # create a copy of the current agent
+                    # new_buffer = copy.deepcopy(agent.buffer)
                     # agent.save_weights('temp_weights.pth')
                     # t5 = datetime.now()
-                    print(f"Agent weights saved.")
+                    # print(f"Agent weights saved.")
                     # new_agent = PPO(state_dim, action_dim, batch_size, buffer_size, lr_actor, lr_critic, gamma, num_of_epochs, eps_clip, ent_coef, vf_coef, action_sd)
                     # new_agent.load_weights('temp_weights.pth')
                     t6 = datetime.now()

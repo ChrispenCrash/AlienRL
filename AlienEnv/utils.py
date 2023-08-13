@@ -80,3 +80,17 @@ def dist_to_line( point1, point2, car_coord):
 
     dist = abs(A*car_coord[0] + B*car_coord[1] + C) / np.sqrt(A**2 + B**2)
     return dist
+
+class ActionSmoother:
+    def __init__(self, alpha=0.8):
+        self.alpha = alpha
+        self.prev_action = None
+
+    def smooth(self, action):
+        if self.prev_action is None:
+            self.prev_action = action
+            return action
+
+        smoothed_action = self.alpha * self.prev_action + (1 - self.alpha) * action
+        self.prev_action = smoothed_action
+        return smoothed_action
